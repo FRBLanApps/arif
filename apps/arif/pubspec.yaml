@@ -19,6 +19,7 @@ dependencies:
     path: ../../packages/arif_rpc
   arif_engine:
     path: ../../packages/arif_engine
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:

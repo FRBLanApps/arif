@@ -49,6 +49,13 @@
   "useTls": "使用 TLS",
   "invalidPort": "请输入有效端口（1–65535）。",
   "engineVersion": "aria2 {version}",
-  "taskAdded": "已添加任务 {gid}"
+  "taskAdded": "已添加任务 {gid}",
+  "connectionMode": "模式",
+  "modeLocal": "本地引擎",
+  "modeRemote": "仅远程 RPC",
+  "localEngineHint": "若本机该端口已有 aria2 则复用；否则启动托管的 aria2-next/aria2c 进程。",
+  "engineBinary": "引擎二进制",
+  "engineBinaryMissing": "未找到（请安装 aria2 或设置 ARIF_ENGINE_PATH）"
 }
+
 

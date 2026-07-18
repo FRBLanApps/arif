@@ -167,4 +167,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String taskAdded(String gid) {
     return 'Added task $gid';
   }
+
+  @override
+  String get connectionMode => 'Mode';
+
+  @override
+  String get modeLocal => 'Local engine';
+
+  @override
+  String get modeRemote => 'Remote RPC only';
+
+  @override
+  String get localEngineHint =>
+      'Reuse RPC on this port if aria2 is already running; otherwise start a managed aria2-next/aria2c process.';
+
+  @override
+  String get engineBinary => 'Engine binary';
+
+  @override
+  String get engineBinaryMissing =>
+      'Not found (install aria2 or set ARIF_ENGINE_PATH)';
 }

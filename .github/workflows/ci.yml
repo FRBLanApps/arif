@@ -53,6 +53,8 @@ jobs:
       - name: Test packages
         run: |
           (cd packages/arif_rpc && dart test)
+          (cd packages/arif_core && dart test)
+          (cd packages/arif_engine && dart test)
 
       - name: Test app
         working-directory: apps/arif

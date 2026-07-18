@@ -26,24 +26,31 @@ class EngineConfig {
   final bool rpcListenAll;
   final bool rpcAllowOriginAll;
 
-  /// CLI args for `aria2-next` process mode.
-  List<String> toProcessArgs() {
+  /// CLI args for `aria2-next` / `aria2c` process mode.
+  ///
+  /// Mirrors Motrix Next sidecar flags: enable RPC, loopback by default,
+  /// session restore when the session file exists.
+  List<String> toProcessArgs({bool sessionFileExists = true}) {
     return [
-      if (enableRpc) '--enable-rpc',
-      '--rpc-listen-all=${rpcListenAll ? 'true' : 'false'}',
-      '--rpc-listen-port=$rpcPort',
-      if (rpcSecret != null && rpcSecret!.isNotEmpty)
-        '--rpc-secret=$rpcSecret',
-      if (rpcAllowOriginAll) '--rpc-allow-origin-all',
+      if (enableRpc) ...[
+        '--enable-rpc=true',
+        '--rpc-listen-all=${rpcListenAll ? 'true' : 'false'}',
+        '--rpc-listen-port=$rpcPort',
+        if (rpcAllowOriginAll) '--rpc-allow-origin-all=true',
+        if (rpcSecret != null && rpcSecret!.isNotEmpty)
+          '--rpc-secret=$rpcSecret',
+      ],
       '--dir=$downloadDir',
       '--save-session=$sessionPath',
+      '--save-session-interval=30',
+      if (sessionFileExists) '--input-file=$sessionPath',
       if (continueDownload) '--continue=true',
       '--max-concurrent-downloads=$maxConcurrentDownloads',
-      '--input-file=$sessionPath',
       if (confPath != null) '--conf-path=$confPath',
       ...extraArgs,
     ];
   }
+
 
   EngineConfig copyWith({
     String? downloadDir,

@@ -30,20 +30,25 @@ third_party/aria2-next  git submodule / shallow fork patches
 UI only talks to `SessionController` → `Aria2Client` (JSON-RPC).  
 Local engine start is an implementation detail of `EngineHost` (not required for remote RPC).
 
-### Current RPC flow (V1)
+### Current RPC + engine flow (V1)
 
 ```
-App start
-  → SessionController.connect()  // default 127.0.0.1:6800
+App start (profile = local)
+  → SessionController.connect()
+  → LocalEngineService.ensureRunning()
+       · reuse existing aria2 on port if RPC answers
+       · else ProcessEngineHost spawn aria2-next/aria2c
   → aria2.getVersion
   → poll every 1s: getGlobalStat + tellActive/Waiting/Stopped
 UI
   → addUri / pause / unpause / remove
 Connections page
-  → edit host/port/secret/TLS and reconnect
+  → mode: local engine | remote RPC
+  → host/port/secret/TLS and reconnect
 ```
 
 Compatible with stock aria2 and aria2-next (Motrix Next–style method set).
+FFI/libaria2 is deferred (iOS later).
 
 ## Tooling
 

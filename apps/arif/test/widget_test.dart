@@ -8,6 +8,7 @@ void main() {
       (tester) async {
     final session = SessionController(
       profile: ConnectionProfile.localDefault(),
+      autoStartLocalEngine: false,
     );
     addTearDown(session.dispose);
 

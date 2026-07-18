@@ -165,4 +165,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String taskAdded(String gid) {
     return '已添加任务 $gid';
   }
+
+  @override
+  String get connectionMode => '模式';
+
+  @override
+  String get modeLocal => '本地引擎';
+
+  @override
+  String get modeRemote => '仅远程 RPC';
+
+  @override
+  String get localEngineHint =>
+      '若本机该端口已有 aria2 则复用；否则启动托管的 aria2-next/aria2c 进程。';
+
+  @override
+  String get engineBinary => '引擎二进制';
+
+  @override
+  String get engineBinaryMissing => '未找到（请安装 aria2 或设置 ARIF_ENGINE_PATH）';
 }

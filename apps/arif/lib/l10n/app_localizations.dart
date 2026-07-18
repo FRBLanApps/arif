@@ -397,6 +397,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Added task {gid}'**
   String taskAdded(String gid);
+
+  /// No description provided for @connectionMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get connectionMode;
+
+  /// No description provided for @modeLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Local engine'**
+  String get modeLocal;
+
+  /// No description provided for @modeRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote RPC only'**
+  String get modeRemote;
+
+  /// No description provided for @localEngineHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse RPC on this port if aria2 is already running; otherwise start a managed aria2-next/aria2c process.'**
+  String get localEngineHint;
+
+  /// No description provided for @engineBinary.
+  ///
+  /// In en, this message translates to:
+  /// **'Engine binary'**
+  String get engineBinary;
+
+  /// No description provided for @engineBinaryMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Not found (install aria2 or set ARIF_ENGINE_PATH)'**
+  String get engineBinaryMissing;
 }
 
 class _AppLocalizationsDelegate

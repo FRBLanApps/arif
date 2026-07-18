@@ -71,6 +71,7 @@ void main() {
       profile: ConnectionProfile.localDefault(),
       client: client,
       pollInterval: const Duration(hours: 1),
+      autoStartLocalEngine: false,
     );
 
     await session.connect();

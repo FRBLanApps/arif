@@ -73,6 +73,13 @@
         "type": "String"
       }
     }
-  }
+  },
+  "connectionMode": "Mode",
+  "modeLocal": "Local engine",
+  "modeRemote": "Remote RPC only",
+  "localEngineHint": "Reuse RPC on this port if aria2 is already running; otherwise start a managed aria2-next/aria2c process.",
+  "engineBinary": "Engine binary",
+  "engineBinaryMissing": "Not found (install aria2 or set ARIF_ENGINE_PATH)"
 }
+
 
