@@ -1,0 +1,54 @@
+{
+  "@@locale": "en",
+  "appTitle": "arif",
+  "@appTitle": {
+    "description": "Application title"
+  },
+  "tasks": "Tasks",
+  "settings": "Settings",
+  "connections": "Connections",
+  "addTask": "Add task",
+  "active": "Active",
+  "waiting": "Waiting",
+  "stopped": "Stopped",
+  "all": "All",
+  "noTasks": "No tasks yet",
+  "noTasksHint": "Add a URL or connect to a remote aria2 instance.",
+  "downloadSpeed": "Down",
+  "uploadSpeed": "Up",
+  "pause": "Pause",
+  "resume": "Resume",
+  "remove": "Remove",
+  "refresh": "Refresh",
+  "uriHint": "https://example.com/file.zip",
+  "add": "Add",
+  "cancel": "Cancel",
+  "localEngine": "Local engine",
+  "remoteRpc": "Remote RPC",
+  "host": "Host",
+  "port": "Port",
+  "rpcSecret": "RPC secret",
+  "notConnected": "Not connected",
+  "connected": "Connected",
+  "connecting": "Connecting…",
+  "connectionFailed": "Connection failed",
+  "engineStopped": "Engine stopped",
+  "engineRunning": "Engine running",
+  "language": "Language",
+  "systemDefault": "System default",
+  "english": "English",
+  "chineseSimplified": "简体中文",
+  "about": "About",
+  "aboutBody": "arif is a native shell for aria2-next (AriaNg-style manager).",
+  "iosKeepAliveTitle": "iOS background keep-alive",
+  "iosKeepAliveSummary": "iOS builds are for sideload / jailbreak only. Keep-alive uses aggressive system APIs and is not App Store safe.",
+  "iosKeepAliveLearnMore": "Learn more",
+  "versionLabel": "Version {version}",
+  "@versionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  }
+}

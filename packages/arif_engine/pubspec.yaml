@@ -1,0 +1,19 @@
+name: arif_engine
+description: Local aria2-next engine host (process / FFI) for arif
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  arif_core:
+    path: ../arif_core
+  arif_rpc:
+    path: ../arif_rpc
+  meta: ^1.15.0
+  path: ^1.9.0
+
+dev_dependencies:
+  lints: ^5.1.1
+  test: ^1.25.8

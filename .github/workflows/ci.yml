@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Pub get (workspace packages)
+        run: |
+          dart pub get
+          (cd packages/arif_rpc && dart pub get)
+          (cd packages/arif_core && dart pub get)
+          (cd packages/arif_engine && dart pub get)
+          (cd apps/arif && flutter pub get)
+
+      - name: Generate l10n
+        working-directory: apps/arif
+        run: flutter gen-l10n
+
+      - name: Analyze packages
+        run: |
+          (cd packages/arif_rpc && dart analyze --fatal-infos)
+          (cd packages/arif_core && dart analyze --fatal-infos)
+          (cd packages/arif_engine && dart analyze --fatal-infos)
+
+      - name: Analyze app
+        working-directory: apps/arif
+        run: flutter analyze --fatal-infos
+
+      - name: Test packages
+        run: |
+          (cd packages/arif_rpc && dart test)
+
+      - name: Test app
+        working-directory: apps/arif
+        run: flutter test

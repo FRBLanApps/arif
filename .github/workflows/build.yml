@@ -1,0 +1,184 @@
+name: Build
+
+# Prefer remote builds via: gh workflow run build.yml -f targets=linux,android
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "Comma-separated targets: linux,android,windows,ios,all"
+        required: true
+        default: "linux,android"
+        type: string
+      profile:
+        description: "Build mode"
+        required: true
+        default: release
+        type: choice
+        options:
+          - release
+          - profile
+          - debug
+  push:
+    tags:
+      - "v*"
+
+env:
+  APP_DIR: apps/arif
+
+jobs:
+  prepare:
+    name: Resolve targets
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        shell: bash
+        run: |
+          set -euo pipefail
+          RAW="${{ github.event.inputs.targets || 'all' }}"
+          RAW="$(echo "$RAW" | tr '[:upper:]' '[:lower:]' | tr -d ' ')"
+          if [[ "$RAW" == "all" ]]; then
+            RAW="linux,android,windows,ios"
+          fi
+          IFS=',' read -ra PARTS <<< "$RAW"
+          ITEMS=()
+          for t in "${PARTS[@]}"; do
+            case "$t" in
+              linux)   ITEMS+=('{"target":"linux","os":"ubuntu-latest"}') ;;
+              android) ITEMS+=('{"target":"android","os":"ubuntu-latest"}') ;;
+              windows) ITEMS+=('{"target":"windows","os":"windows-latest"}') ;;
+              ios)     ITEMS+=('{"target":"ios","os":"macos-latest"}') ;;
+              *) echo "Unknown target: $t" >&2; exit 1 ;;
+            esac
+          done
+          MATRIX=$(printf '%s\n' "${ITEMS[@]}" | jq -sc '{include:.}')
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "Resolved matrix: $MATRIX"
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable platforms
+        shell: bash
+        run: |
+          case "${{ matrix.target }}" in
+            linux)   sudo apt-get update -y
+                     sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+                     flutter config --enable-linux-desktop
+                     ;;
+            windows) flutter config --enable-windows-desktop ;;
+            ios)     flutter config --enable-ios ;;
+            android) flutter config --enable-android ;;
+          esac
+
+      - name: Java (Android)
+        if: matrix.target == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK licenses
+        if: matrix.target == 'android'
+        shell: bash
+        run: |
+          yes | flutter doctor --android-licenses || true
+
+      - name: Pub get
+        shell: bash
+        run: |
+          dart pub get
+          (cd packages/arif_rpc && dart pub get)
+          (cd packages/arif_core && dart pub get)
+          (cd packages/arif_engine && dart pub get)
+          (cd apps/arif && flutter pub get)
+          (cd apps/arif && flutter gen-l10n)
+
+      - name: Build Linux
+        if: matrix.target == 'linux'
+        working-directory: apps/arif
+        run: flutter build linux --${{ github.event.inputs.profile || 'release' }}
+
+      - name: Package Linux
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          MODE="${{ github.event.inputs.profile || 'release' }}"
+          SRC="apps/arif/build/linux/x64/${MODE}/bundle"
+          OUT="dist/arif-linux-x64"
+          mkdir -p dist
+          cp -a "$SRC" "$OUT"
+          tar -C dist -czf "dist/arif-linux-x64.tar.gz" arif-linux-x64
+
+      - name: Build Android APK
+        if: matrix.target == 'android'
+        working-directory: apps/arif
+        run: flutter build apk --${{ github.event.inputs.profile || 'release' }}
+
+      - name: Package Android
+        if: matrix.target == 'android'
+        shell: bash
+        run: |
+          MODE="${{ github.event.inputs.profile || 'release' }}"
+          mkdir -p dist
+          cp apps/arif/build/app/outputs/flutter-apk/app-*.apk "dist/arif-android-${MODE}.apk" 2>/dev/null \
+            || cp apps/arif/build/app/outputs/flutter-apk/app-release.apk dist/arif-android-release.apk
+
+      - name: Build Windows
+        if: matrix.target == 'windows'
+        working-directory: apps/arif
+        run: flutter build windows --${{ github.event.inputs.profile || 'release' }}
+
+      - name: Package Windows
+        if: matrix.target == 'windows'
+        shell: bash
+        run: |
+          MODE="${{ github.event.inputs.profile || 'release' }}"
+          SRC="apps/arif/build/windows/x64/runner/${MODE}"
+          mkdir -p dist
+          7z a "dist/arif-windows-x64.zip" "./${SRC}/*"
+
+      - name: Build iOS (no codesign)
+        if: matrix.target == 'ios'
+        working-directory: apps/arif
+        run: flutter build ios --no-codesign --${{ github.event.inputs.profile || 'release' }}
+
+      - name: Package iOS
+        if: matrix.target == 'ios'
+        shell: bash
+        run: |
+          MODE="${{ github.event.inputs.profile || 'release' }}"
+          mkdir -p dist
+          # Unsigned .app for sideload pipelines
+          APP_PATH=$(find apps/arif/build/ios -name "Runner.app" -type d | head -n1)
+          if [[ -n "$APP_PATH" ]]; then
+            tar -C "$(dirname "$APP_PATH")" -czf "dist/arif-ios-unsigned.tar.gz" "$(basename "$APP_PATH")"
+          else
+            echo "Runner.app not found" >&2
+            find apps/arif/build/ios -maxdepth 4 -type d | head -50
+            exit 1
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: arif-${{ matrix.target }}-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14

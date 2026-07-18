@@ -1,0 +1,30 @@
+name: arif
+description: Cross-platform aria2-next downloader shell (Flutter)
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+  cupertino_icons: ^1.0.8
+  arif_core:
+    path: ../../packages/arif_core
+  arif_rpc:
+    path: ../../packages/arif_rpc
+  arif_engine:
+    path: ../../packages/arif_engine
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  generate: true
+  uses-material-design: true

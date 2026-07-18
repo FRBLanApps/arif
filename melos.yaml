@@ -1,0 +1,25 @@
+name: arif
+packages:
+  - apps/**
+  - packages/**
+command:
+  bootstrap:
+    environment:
+      sdk: ">=3.5.0 <4.0.0"
+    dependencies:
+      flutter:
+        sdk: flutter
+    dev_dependencies:
+      flutter_test:
+        sdk: flutter
+scripts:
+  analyze:
+    run: melos exec -- flutter analyze
+    description: Run flutter analyze in all packages
+  test:
+    run: melos exec --dir-exists=test -- flutter test
+    description: Run tests in packages with a test directory
+  gen_l10n:
+    run: melos exec --scope=arif -- flutter gen-l10n
+    description: Generate app localizations
+sdkPath: .fvm/flutter_sdk
