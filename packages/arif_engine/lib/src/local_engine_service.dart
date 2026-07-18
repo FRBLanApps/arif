@@ -35,11 +35,17 @@ class LocalEngineService {
   String? _resolvedBinary;
   EngineConfig? _config;
   bool _ownsHost = false;
+  bool _spawnedByUs = false;
 
   EngineHost? get host => _host;
   String? get resolvedBinary => _resolvedBinary;
   EngineConfig? get config => _config;
   RpcConnectionConfig? get localRpc => _host?.localRpc;
+
+  /// True only when this service spawned (or was given) a managed host that is running.
+  bool get isManagedRunning =>
+      _spawnedByUs && (_host?.currentStatus.isRunning ?? false);
+
   EngineStatus get status =>
       _host?.currentStatus ??
       const EngineStatus(lifecycle: EngineLifecycle.stopped);
@@ -48,12 +54,10 @@ class LocalEngineService {
 
   /// Whether process-based local engine is supported on this platform.
   static bool get isProcessSupported =>
-      !Platform.isIOS && !Platform.isAndroid; // Android needs staged binary first
+      !Platform.isIOS && !Platform.isAndroid;
 
-  /// Android can use process mode once a binary is staged under app files.
   static bool get isAndroidProcessCapable => Platform.isAndroid;
 
-  /// Resolves binary path without starting.
   Future<String?> locateBinary({List<String> extraSearchDirs = const []}) async {
     final dataRoot = _dataRoot;
     final locator = EngineBinaryLocator(
@@ -87,19 +91,36 @@ class LocalEngineService {
     final port = rpcPort ?? defaultRpcPort;
     final rpcSecret = secret ?? this.rpcSecret;
 
+    // Already managing a live host on the requested port — reuse it.
+    final existingHost = _host;
+    final existingRpc = existingHost?.localRpc;
+    if (existingHost != null &&
+        existingHost.currentStatus.isRunning &&
+        existingRpc != null &&
+        existingRpc.port == port &&
+        existingRpc.secret == rpcSecret) {
+      _spawnedByUs = true;
+      return existingRpc;
+    }
+
+    // Managed host exists but config differs — stop before re-spawn.
+    if (existingHost != null) {
+      await stop();
+    }
+
     if (reuseExistingRpc && await isPortOpen(port)) {
       final existing = RpcConnectionConfig(
         host: '127.0.0.1',
         port: port,
         secret: rpcSecret,
       );
-      // Probe without long wait — if it's aria2, use it.
       final client = Aria2Client(config: existing);
       try {
         await client.getVersion().timeout(const Duration(seconds: 2));
+        _spawnedByUs = false;
         return existing;
       } catch (_) {
-        // Port open but not aria2; fall through to spawn with free port.
+        // Port open but not aria2 (or wrong secret); fall through to spawn.
       } finally {
         client.close();
       }
@@ -145,16 +166,26 @@ class LocalEngineService {
     _host = host;
     _config = config;
 
-    await host.start(config);
+    try {
+      await host.start(config);
+    } catch (_) {
+      _host = null;
+      _spawnedByUs = false;
+      rethrow;
+    }
+
     final rpc = host.localRpc;
     if (rpc == null) {
+      await stop();
       throw StateError('Engine started without local RPC endpoint');
     }
+    _spawnedByUs = true;
     return rpc;
   }
 
   Future<void> stop() async {
     await _host?.stop();
+    _spawnedByUs = false;
   }
 
   Future<void> dispose() async {
@@ -164,11 +195,11 @@ class LocalEngineService {
       await _host?.stop();
     }
     _host = null;
+    _spawnedByUs = false;
   }
 
   List<String> _defaultBundledDirs() {
     final dirs = <String>[];
-    // Relative to cwd when running from monorepo / CI artifact extract.
     dirs.add(p.join(Directory.current.path, 'tool', 'dist', 'engine'));
     try {
       final exeDir = File(Platform.resolvedExecutable).parent.path;
@@ -192,7 +223,6 @@ class LocalEngineService {
           Platform.environment['APPDATA'] ?? Directory.systemTemp.path;
       return p.join(appData, 'arif');
     }
-    // Android / others: temp until platform channels provide filesDir.
     return p.join(Directory.systemTemp.path, 'arif');
   }
 }

@@ -49,6 +49,16 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
     super.dispose();
   }
 
+  void _onModeChanged(EngineMode mode) {
+    setState(() {
+      _mode = mode;
+      if (mode == EngineMode.local) {
+        _host.text = '127.0.0.1';
+        _useTls = false;
+      }
+    });
+  }
+
   Future<void> _connect() async {
     final l10n = AppLocalizations.of(context);
     final port = int.tryParse(_port.text.trim());
@@ -61,8 +71,10 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
 
     setState(() => _busy = true);
     final secret = _secret.text.trim();
-    final host =
-        _host.text.trim().isEmpty ? '127.0.0.1' : _host.text.trim();
+    final host = _mode == EngineMode.local
+        ? '127.0.0.1'
+        : (_host.text.trim().isEmpty ? '127.0.0.1' : _host.text.trim());
+
     final profile = ConnectionProfile(
       id: widget.session.profile.id,
       name: _mode == EngineMode.local ? 'Local' : 'Remote',
@@ -71,13 +83,16 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
         host: host,
         port: port,
         secret: secret.isEmpty ? null : secret,
-        useTls: _useTls,
+        useTls: _mode == EngineMode.local ? false : _useTls,
       ),
     );
 
-    await widget.session.updateProfile(profile);
-    if (!mounted) return;
-    setState(() => _busy = false);
+    try {
+      await widget.session.updateProfile(profile);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+
     await _refreshBinary();
     if (!mounted) return;
 
@@ -98,6 +113,7 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final sessionBusy = widget.session.isConnecting || _busy;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.connections)),
@@ -113,6 +129,7 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
               ),
               const SizedBox(height: 8),
               SegmentedButton<EngineMode>(
+                showSelectedIcon: false,
                 segments: [
                   ButtonSegment(
                     value: EngineMode.local,
@@ -126,9 +143,9 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                   ),
                 ],
                 selected: {_mode},
-                onSelectionChanged: _busy
+                onSelectionChanged: sessionBusy
                     ? null
-                    : (value) => setState(() => _mode = value.first),
+                    : (value) => _onModeChanged(value.first),
               ),
               const SizedBox(height: 8),
               Text(
@@ -156,8 +173,11 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                   labelText: l10n.host,
                   border: const OutlineInputBorder(),
                   hintText: '127.0.0.1',
+                  helperText: _mode == EngineMode.local
+                      ? '127.0.0.1'
+                      : null,
                 ),
-                enabled: !_busy && _mode == EngineMode.remote,
+                enabled: !sessionBusy && _mode == EngineMode.remote,
               ),
               const SizedBox(height: 12),
               TextField(
@@ -169,7 +189,7 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                 ),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                enabled: !_busy,
+                enabled: !sessionBusy,
               ),
               const SizedBox(height: 12),
               TextField(
@@ -179,37 +199,45 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                   border: const OutlineInputBorder(),
                 ),
                 obscureText: true,
-                enabled: !_busy,
+                enabled: !sessionBusy,
               ),
               if (_mode == EngineMode.remote)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l10n.useTls),
                   value: _useTls,
-                  onChanged: _busy ? null : (v) => setState(() => _useTls = v),
+                  onChanged:
+                      sessionBusy ? null : (v) => setState(() => _useTls = v),
                 ),
               const SizedBox(height: 8),
               FilledButton.icon(
-                onPressed: _busy ? null : _connect,
-                icon: _busy
+                onPressed: sessionBusy ? null : _connect,
+                icon: sessionBusy
                     ? const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.link),
-                label: Text(_busy ? l10n.connecting : l10n.connect),
+                label: Text(
+                  sessionBusy || widget.session.isConnecting
+                      ? l10n.connecting
+                      : l10n.connect,
+                ),
               ),
               const SizedBox(height: 24),
               _statusCard(context, l10n),
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: _busy
+                onPressed: sessionBusy
                     ? null
                     : () async {
                         setState(() => _busy = true);
-                        await widget.session.disconnect();
-                        if (mounted) setState(() => _busy = false);
+                        try {
+                          await widget.session.disconnect();
+                        } finally {
+                          if (mounted) setState(() => _busy = false);
+                        }
                       },
                 icon: const Icon(Icons.link_off),
                 label: Text(l10n.disconnect),
@@ -237,20 +265,20 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
       SessionPhase.disconnected => l10n.notConnected,
     };
 
+    final lines = <String>[
+      '${session.profile.mode.name} · ${session.profile.rpc.host}:${session.profile.rpc.port}',
+      if (session.engineVersion != null)
+        l10n.engineVersion(session.engineVersion!),
+      if (session.localEngineRunning) l10n.engineRunning,
+      if (session.errorMessage != null) session.errorMessage!,
+    ];
+
     return Card(
       child: ListTile(
         leading: Icon(Icons.cloud_outlined, color: color),
         title: Text(label),
-        subtitle: Text(
-          [
-            '${session.profile.mode.name} · ${session.profile.rpc.host}:${session.profile.rpc.port}',
-            if (session.engineVersion != null)
-              l10n.engineVersion(session.engineVersion!),
-            if (session.localEngineRunning) l10n.engineRunning,
-            if (session.errorMessage != null) session.errorMessage!,
-          ].join('\n'),
-        ),
-        isThreeLine: true,
+        subtitle: Text(lines.join('\n')),
+        isThreeLine: lines.length > 2,
       ),
     );
   }

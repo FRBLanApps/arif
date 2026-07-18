@@ -50,7 +50,9 @@ class SessionController extends ChangeNotifier {
   TaskFilter _filter = TaskFilter.active;
   bool _disposed = false;
   int _pollGeneration = 0;
-  bool _startedLocalEngine = false;
+  int _connectGeneration = 0;
+  Future<void>? _connectInFlight;
+  bool _refreshInFlight = false;
 
   ConnectionProfile get profile => _profile;
   SessionPhase get phase => _phase;
@@ -59,9 +61,10 @@ class SessionController extends ChangeNotifier {
   GlobalStat? get globalStat => _globalStat;
   TaskFilter get filter => _filter;
   bool get isConnected => _phase == SessionPhase.connected;
+  bool get isConnecting => _phase == SessionPhase.connecting;
   Aria2Client? get client => _client;
   LocalEngineService get engine => _engine;
-  bool get localEngineRunning => _engine.status.isRunning;
+  bool get localEngineRunning => _engine.isManagedRunning;
   String? get localEngineBinary => _engine.resolvedBinary;
 
   List<DownloadTask> get activeTasks => _active;
@@ -99,45 +102,107 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<void> connect() async {
-    await disconnect(notify: false, stopLocalEngine: false);
+    if (_disposed) return;
+    // Serialize connect attempts so double-taps cannot spawn two engines.
+    final previous = _connectInFlight;
+    if (previous != null) {
+      await previous;
+      if (_disposed || isConnected) return;
+    }
+
+    final op = _connectImpl();
+    _connectInFlight = op;
+    try {
+      await op;
+    } finally {
+      if (identical(_connectInFlight, op)) {
+        _connectInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _connectImpl() async {
+    final gen = ++_connectGeneration;
+
+    // Always tear down previous RPC client. Stop managed engine when leaving
+    // local mode, or when reconnecting local (ensureRunning will re-attach).
+    final stopEngine = !_profile.isLocal || !autoStartLocalEngine;
+    await disconnect(notify: false, stopLocalEngine: stopEngine);
+    if (_disposed || gen != _connectGeneration) return;
+
+    // Local reconnect: stop previous managed host so port/config can change.
+    if (_profile.isLocal && autoStartLocalEngine) {
+      await _engine.stop();
+    }
+    if (_disposed || gen != _connectGeneration) return;
+
     _phase = SessionPhase.connecting;
     _errorMessage = null;
     notifyListeners();
 
+    var managedSpawnAttempted = false;
+
     try {
       var rpc = _profile.rpc;
 
-      if (_profile.isLocal &&
-          autoStartLocalEngine &&
-          _injectedClient == null) {
+      if (_profile.isLocal && autoStartLocalEngine && _injectedClient == null) {
+        // Local engine always listens on loopback.
+        rpc = rpc.copyWith(host: '127.0.0.1', useTls: false);
+        managedSpawnAttempted = true;
         final ensured = await _engine.ensureRunning(
           reuseExistingRpc: true,
           rpcPort: rpc.port,
           secret: rpc.secret,
         );
-        rpc = ensured;
-        _startedLocalEngine = _engine.host != null;
-        // Keep profile RPC in sync if port was reallocated.
-        if (rpc.port != _profile.rpc.port ||
-            rpc.secret != _profile.rpc.secret) {
-          _profile = _profile.copyWith(rpc: rpc);
+        if (_disposed || gen != _connectGeneration) {
+          await _engine.stop();
+          return;
         }
+        rpc = ensured;
+        _profile = _profile.copyWith(
+          rpc: rpc.copyWith(host: '127.0.0.1', useTls: false),
+        );
       }
 
       final client = _injectedClient ?? Aria2Client(config: rpc);
+      if (_disposed || gen != _connectGeneration) {
+        if (_injectedClient == null) client.close();
+        if (managedSpawnAttempted && _engine.isManagedRunning) {
+          await _engine.stop();
+        }
+        return;
+      }
       _client = client;
 
       final version =
           await client.getVersion().timeout(const Duration(seconds: 5));
+      if (_disposed || gen != _connectGeneration) {
+        if (_injectedClient == null) client.close();
+        _client = null;
+        return;
+      }
+
       _engineVersion = version.version;
       _phase = SessionPhase.connected;
       _errorMessage = null;
       notifyListeners();
       await refresh();
-      _startPolling();
+      if (_disposed || gen != _connectGeneration) return;
+      if (_phase == SessionPhase.connected) {
+        _startPolling();
+      }
     } catch (e) {
+      if (_disposed || gen != _connectGeneration) return;
+
+      // Do not leave an orphan managed process after a failed connect.
+      if (managedSpawnAttempted && _engine.isManagedRunning) {
+        await _engine.stop();
+      }
+
       _phase = SessionPhase.error;
-      _errorMessage = e is Aria2Exception ? e.message : e.toString();
+      _errorMessage = e is Aria2Exception
+          ? e.message
+          : e.toString().replaceFirst(RegExp(r'^Exception: '), '');
       _engineVersion = null;
       if (_injectedClient == null) {
         _client?.close();
@@ -165,9 +230,8 @@ class SessionController extends ChangeNotifier {
     _waiting = const [];
     _stopped = const [];
 
-    if (stopLocalEngine && _startedLocalEngine) {
+    if (stopLocalEngine) {
       await _engine.stop();
-      _startedLocalEngine = false;
     }
 
     if (notify && !_disposed) notifyListeners();
@@ -188,6 +252,8 @@ class SessionController extends ChangeNotifier {
   Future<void> refresh() async {
     final client = _client;
     if (client == null || _phase != SessionPhase.connected) return;
+    if (_refreshInFlight) return;
+    _refreshInFlight = true;
 
     final gen = _pollGeneration;
     try {
@@ -198,6 +264,7 @@ class SessionController extends ChangeNotifier {
         client.tellStopped(0, 1000),
       ]);
       if (_disposed || gen != _pollGeneration) return;
+      if (_phase != SessionPhase.connected) return;
 
       _globalStat = results[0] as GlobalStat;
       _active = results[1] as List<DownloadTask>;
@@ -211,6 +278,8 @@ class SessionController extends ChangeNotifier {
       _errorMessage = e is Aria2Exception ? e.message : e.toString();
       _stopPolling();
       notifyListeners();
+    } finally {
+      _refreshInFlight = false;
     }
   }
 
@@ -257,11 +326,7 @@ class SessionController extends ChangeNotifier {
       } on Aria2Exception {
         await client.forceRemove(gid);
       }
-      try {
-        await client.removeDownloadResult(gid);
-      } on Aria2Exception {
-        // Result may already be gone.
-      }
+      // Keep entry in stopped list; user can purge later if needed.
     }
     await refresh();
   }
@@ -277,6 +342,7 @@ class SessionController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _connectGeneration++;
     _stopPolling();
     if (_injectedClient == null) {
       _client?.close();

@@ -46,6 +46,7 @@ class RpcConnectionConfig {
     String? host,
     int? port,
     String? secret,
+    bool clearSecret = false,
     bool? useTls,
     String? rpcPath,
     RpcTransport? transport,
@@ -53,12 +54,13 @@ class RpcConnectionConfig {
     return RpcConnectionConfig(
       host: host ?? this.host,
       port: port ?? this.port,
-      secret: secret ?? this.secret,
+      secret: clearSecret ? null : (secret ?? this.secret),
       useTls: useTls ?? this.useTls,
       rpcPath: rpcPath ?? this.rpcPath,
       transport: transport ?? this.transport,
     );
   }
+
 
   Map<String, Object?> toJson() => {
         'host': host,

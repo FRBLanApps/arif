@@ -32,6 +32,7 @@ class _HomePageState extends State<HomePage> {
       builder: (context, _) {
         final tasks = session.visibleTasks;
         final stat = session.globalStat;
+        final canAct = session.isConnected;
 
         return Scaffold(
           appBar: AppBar(
@@ -49,10 +50,22 @@ class _HomePageState extends State<HomePage> {
               ),
               IconButton(
                 tooltip: l10n.refresh,
-                onPressed: session.isConnected
-                    ? () => session.refresh()
-                    : () => session.connect(),
-                icon: const Icon(Icons.refresh),
+                onPressed: session.isConnecting
+                    ? null
+                    : () {
+                        if (session.isConnected) {
+                          session.refresh();
+                        } else {
+                          session.connect();
+                        }
+                      },
+                icon: session.isConnecting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
               ),
               IconButton(
                 tooltip: l10n.settings,
@@ -66,9 +79,9 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Row(
                   children: [
-                    _StatusChip(session: session),
-                    const Spacer(),
-                    if (stat != null) ...[
+                    Flexible(child: _StatusChip(session: session)),
+                    if (stat != null && session.isConnected) ...[
+                      const SizedBox(width: 12),
                       Text(
                         '${l10n.downloadSpeed} ${formatSpeed(stat.downloadSpeed)}',
                         style: Theme.of(context).textTheme.labelMedium,
@@ -87,33 +100,39 @@ class _HomePageState extends State<HomePage> {
           body: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: SegmentedButton<TaskFilter>(
-                  segments: [
-                    ButtonSegment(
-                      value: TaskFilter.active,
-                      label: Text(l10n.active),
-                      icon: const Icon(Icons.play_arrow),
-                    ),
-                    ButtonSegment(
-                      value: TaskFilter.waiting,
-                      label: Text(l10n.waiting),
-                      icon: const Icon(Icons.schedule),
-                    ),
-                    ButtonSegment(
-                      value: TaskFilter.stopped,
-                      label: Text(l10n.stopped),
-                      icon: const Icon(Icons.stop),
-                    ),
-                    ButtonSegment(
-                      value: TaskFilter.all,
-                      label: Text(l10n.all),
-                      icon: const Icon(Icons.list),
-                    ),
-                  ],
-                  selected: {session.filter},
-                  onSelectionChanged: (value) {
-                    session.setFilter(value.first);
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 420;
+                    return SegmentedButton<TaskFilter>(
+                      showSelectedIcon: false,
+                      segments: [
+                        ButtonSegment(
+                          value: TaskFilter.active,
+                          label: Text(l10n.active),
+                          icon: compact ? null : const Icon(Icons.play_arrow),
+                        ),
+                        ButtonSegment(
+                          value: TaskFilter.waiting,
+                          label: Text(l10n.waiting),
+                          icon: compact ? null : const Icon(Icons.schedule),
+                        ),
+                        ButtonSegment(
+                          value: TaskFilter.stopped,
+                          label: Text(l10n.stopped),
+                          icon: compact ? null : const Icon(Icons.stop),
+                        ),
+                        ButtonSegment(
+                          value: TaskFilter.all,
+                          label: Text(l10n.all),
+                          icon: compact ? null : const Icon(Icons.list),
+                        ),
+                      ],
+                      selected: {session.filter},
+                      onSelectionChanged: (value) {
+                        session.setFilter(value.first);
+                      },
+                    );
                   },
                 ),
               ),
@@ -121,9 +140,11 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _showAddTaskDialog(context),
-            icon: const Icon(Icons.add),
-            label: Text(l10n.addTask),
+            onPressed: canAct
+                ? () => _showAddTaskDialog(context)
+                : () => Navigator.of(context).pushNamed('/connections'),
+            icon: Icon(canAct ? Icons.add : Icons.link),
+            label: Text(canAct ? l10n.addTask : l10n.connections),
           ),
         );
       },
@@ -136,7 +157,24 @@ class _HomePageState extends State<HomePage> {
     SessionController session,
     List<DownloadTask> tasks,
   ) {
+    if (session.isConnecting) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              l10n.connecting,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ],
+        ),
+      );
+    }
+
     if (!session.isConnected) {
+      final isError = session.phase == SessionPhase.error;
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -144,15 +182,15 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.cloud_off_outlined,
+                isError ? Icons.error_outline : Icons.cloud_off_outlined,
                 size: 64,
-                color: Theme.of(context).colorScheme.outline,
+                color: isError
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(context).colorScheme.outline,
               ),
               const SizedBox(height: 16),
               Text(
-                session.phase == SessionPhase.error
-                    ? l10n.connectionFailed
-                    : l10n.notConnected,
+                isError ? l10n.connectionFailed : l10n.notConnected,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -165,7 +203,8 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: () => Navigator.of(context).pushNamed('/connections'),
+                onPressed: () =>
+                    Navigator.of(context).pushNamed('/connections'),
                 icon: const Icon(Icons.link),
                 label: Text(l10n.connections),
               ),
@@ -214,6 +253,7 @@ class _HomePageState extends State<HomePage> {
     return RefreshIndicator(
       onRefresh: session.refresh,
       child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 88),
         itemCount: tasks.length,
         itemBuilder: (context, index) {
@@ -235,7 +275,8 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (!mounted) return;
       final message = e is Aria2Exception ? e.message : e.toString();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -265,8 +306,14 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _showAddTaskDialog(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
-    final controller = TextEditingController();
+    if (!widget.session.isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.notConnected)),
+      );
+      return;
+    }
 
+    final controller = TextEditingController();
     final uri = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -309,7 +356,8 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (!context.mounted) return;
       final message = e is Aria2Exception ? e.message : e.toString();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }
@@ -330,8 +378,14 @@ class _StatusChip extends StatelessWidget {
           Colors.green,
         ),
       SessionPhase.connecting => (l10n.connecting, Colors.orange),
-      SessionPhase.error => (l10n.connectionFailed, Theme.of(context).colorScheme.error),
-      SessionPhase.disconnected => (l10n.notConnected, Theme.of(context).colorScheme.outline),
+      SessionPhase.error => (
+          l10n.connectionFailed,
+          Theme.of(context).colorScheme.error
+        ),
+      SessionPhase.disconnected => (
+          l10n.notConnected,
+          Theme.of(context).colorScheme.outline
+        ),
     };
 
     return Row(
@@ -339,7 +393,13 @@ class _StatusChip extends StatelessWidget {
       children: [
         Icon(Icons.circle, size: 10, color: color),
         const SizedBox(width: 6),
-        Text(label, style: Theme.of(context).textTheme.labelMedium),
+        Flexible(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }
