@@ -9,6 +9,9 @@ import 'package:arif/src/state/locale_controller.dart';
 import 'package:arif/src/state/session_controller.dart';
 import 'package:arif_core/arif_core.dart';
 
+/// 根 Widget：持有 [SessionController] / 语言，注册路由。
+///
+/// 默认 [autoConnect] 在首帧后连本地 6800（复用或拉起引擎）。
 class ArifApp extends StatefulWidget {
   const ArifApp({
     super.key,
@@ -16,8 +19,10 @@ class ArifApp extends StatefulWidget {
     this.autoConnect = true,
   });
 
-  /// Optional injected session (tests).
+  /// 测试注入的 session。
   final SessionController? session;
+
+  /// 是否启动后自动 [SessionController.connect]。
   final bool autoConnect;
 
   @override

@@ -6,6 +6,9 @@ import 'package:arif/src/util/format.dart';
 import 'package:arif_core/arif_core.dart';
 import 'package:arif_rpc/arif_rpc.dart';
 
+/// 单个任务详情：进度 / 速度 / ETA / 文件列表 / 暂停删除。
+///
+/// 进入时 [fetchTask] 拉一次全量；之后监听 [SessionController] 列表刷新。
 class TaskDetailPage extends StatefulWidget {
   const TaskDetailPage({
     super.key,
@@ -14,6 +17,8 @@ class TaskDetailPage extends StatefulWidget {
   });
 
   final SessionController session;
+
+  /// aria2 任务 GID。
   final String gid;
 
   @override

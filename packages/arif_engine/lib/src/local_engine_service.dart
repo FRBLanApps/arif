@@ -11,9 +11,14 @@ import 'engine_status.dart';
 import 'port_utils.dart';
 import 'process_engine_host.dart';
 
-/// High-level local engine lifecycle: locate binary → start → expose RPC.
+/// 本地引擎的高层入口：找二进制 →（可选）spawn → 返回回环 RPC。
 ///
-/// Process mode only (FFI later). Safe no-op on platforms without a binary.
+/// [ensureRunning] 决策顺序：
+/// 1. 已有我们管理且端口匹配的 Host → 直接复用
+/// 2. 端口上已有能 `getVersion` 的 aria2 → **复用外部进程**（不 spawn）
+/// 3. 否则 locate 二进制并 [ProcessEngineHost.start]
+///
+/// 仅进程模式；iOS FFI 另说。
 class LocalEngineService {
   LocalEngineService({
     EngineBinaryLocator? locator,
@@ -35,6 +40,8 @@ class LocalEngineService {
   String? _resolvedBinary;
   EngineConfig? _config;
   bool _ownsHost = false;
+
+  /// 是否由本服务 spawn（外部复用的 aria2 为 false，断开时不要误杀用户进程）。
   bool _spawnedByUs = false;
 
   EngineHost? get host => _host;
@@ -42,7 +49,7 @@ class LocalEngineService {
   EngineConfig? get config => _config;
   RpcConnectionConfig? get localRpc => _host?.localRpc;
 
-  /// True only when this service spawned (or was given) a managed host that is running.
+  /// 仅当我们托管的进程在跑时为 true（复用外部 RPC 时为 false）。
   bool get isManagedRunning =>
       _spawnedByUs && (_host?.currentStatus.isRunning ?? false);
 
@@ -75,10 +82,9 @@ class LocalEngineService {
     return path;
   }
 
-  /// Starts a managed engine if needed and returns loopback RPC config.
+  /// 确保本地有可用 RPC，返回应连接的 [RpcConnectionConfig]。
   ///
-  /// If [reuseExistingRpc] is true and something already answers RPC on the
-  /// preferred port, returns that endpoint without spawning (external aria2).
+  /// [reuseExistingRpc]：端口上已有 aria2 则不启动新进程。
   Future<RpcConnectionConfig> ensureRunning({
     bool reuseExistingRpc = true,
     int? rpcPort,

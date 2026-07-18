@@ -11,10 +11,12 @@ import 'engine_status.dart';
 import 'port_utils.dart';
 import 'rpc_ready.dart';
 
-/// Spawns `aria2-next` / `aria2c` as a child process and exposes loopback RPC.
+/// 以**子进程**方式运行 `aria2-next` / `aria2c`，并对 127.0.0.1 暴露 JSON-RPC。
 ///
-/// Used on Linux, Windows, and Android (with a pre-staged binary).
-/// Not used on iOS (FFI later).
+/// 流程：`start` → spawn → [waitForRpcReady] → running；
+/// `stop` → 尽量 `aria2.shutdown` → 再 SIGTERM/SIGKILL。
+///
+/// iOS 不支持（用 FFI）；Android 需事先把二进制放到可执行路径。
 class ProcessEngineHost implements EngineHost {
   ProcessEngineHost({
     required this.executablePath,
@@ -24,14 +26,18 @@ class ProcessEngineHost implements EngineHost {
     this.allocatePortIfBusy = true,
   });
 
-  /// Absolute path to the engine binary.
+  /// 引擎可执行文件绝对路径。
   final String executablePath;
 
   final String? workingDirectory;
+
+  /// 等待 RPC 就绪的最长时间。
   final Duration readyTimeout;
+
+  /// 优雅退出等待时间。
   final Duration stopTimeout;
 
-  /// When true, if [EngineConfig.rpcPort] is occupied, pick another free port.
+  /// 配置端口被占用时是否自动换空闲端口。
   final bool allocatePortIfBusy;
 
   final _statusController = StreamController<EngineStatus>.broadcast();
@@ -43,13 +49,15 @@ class ProcessEngineHost implements EngineHost {
   EngineConfig? _activeConfig;
   StreamSubscription<String>? _stdoutSub;
   StreamSubscription<String>? _stderrSub;
+
+  /// true 表示我们主动 stop/kill，exitCode 回调不要标成 crashed。
   bool _intentionalStop = false;
   final List<String> _recentLogs = [];
 
-  /// Recent stdout/stderr lines (capped).
+  /// 最近 stdout/stderr 行（环形缓冲，最多约 200 行）。
   List<String> get recentLogs => List.unmodifiable(_recentLogs);
 
-  /// Live log stream of engine stdout/stderr lines.
+  /// 实时日志流。
   Stream<String> get logs => _logController.stream;
 
   @override
@@ -206,7 +214,7 @@ class ProcessEngineHost implements EngineHost {
       ),
     );
 
-    // Prefer graceful RPC shutdown (aria2.shutdown), Motrix-style soft stop.
+    // 优先 RPC 优雅退出（与 Motrix 类似），失败再杀进程。
     final rpc = _localRpc;
     if (rpc != null) {
       final client = Aria2Client(config: rpc);
@@ -295,7 +303,7 @@ class ProcessEngineHost implements EngineHost {
     _process = null;
   }
 
-  /// Drop HTTP(S)_PROXY for the child so local RPC is never proxied.
+  /// 子进程环境去掉 HTTP(S)_PROXY，避免本机 RPC 被代理劫持。
   Map<String, String> _sanitizedEnv() {
     final env = Map<String, String>.from(Platform.environment);
     for (final key in const [

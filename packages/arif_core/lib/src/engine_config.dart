@@ -1,4 +1,6 @@
-/// Runtime options for starting a local aria2-next engine.
+/// 启动本地 aria2-next / aria2c 进程时的参数。
+///
+/// 由 [ProcessEngineHost] 转成 CLI args；不负责找二进制路径。
 class EngineConfig {
   const EngineConfig({
     required this.downloadDir,
@@ -14,22 +16,38 @@ class EngineConfig {
     this.rpcAllowOriginAll = true,
   });
 
+  /// `--dir=`
   final String downloadDir;
+
+  /// session 文件路径：既 `--save-session` 也可选 `--input-file`。
   final String sessionPath;
+
+  /// `--rpc-listen-port=`
   final int rpcPort;
+
+  /// `--rpc-secret=`（空则不传，允许无密钥的本机 aria2）。
   final String? rpcSecret;
+
+  /// 可选 `--conf-path=`。
   final String? confPath;
+
+  /// 追加在末尾的任意 CLI 参数。
   final List<String> extraArgs;
+
   final int maxConcurrentDownloads;
   final bool continueDownload;
   final bool enableRpc;
+
+  /// false = 只监听本机（更安全，默认）。
   final bool rpcListenAll;
+
+  /// 浏览器跨域调 RPC 时需要；本地 App 一般 true。
   final bool rpcAllowOriginAll;
 
-  /// CLI args for `aria2-next` / `aria2c` process mode.
+  /// 生成进程参数列表。
   ///
-  /// Mirrors Motrix Next sidecar flags: enable RPC, loopback by default,
-  /// session restore when the session file exists.
+  /// [sessionFileExists] 为 false 时不传 `--input-file`，避免 aria2 读空文件报错。
+  /// 标志风格对齐 Motrix Next sidecar（`--enable-rpc=true` 等）。
   List<String> toProcessArgs({bool sessionFileExists = true}) {
     return [
       if (enableRpc) ...[
@@ -50,7 +68,6 @@ class EngineConfig {
       ...extraArgs,
     ];
   }
-
 
   EngineConfig copyWith({
     String? downloadDir,

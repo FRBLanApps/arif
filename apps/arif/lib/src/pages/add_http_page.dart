@@ -5,7 +5,9 @@ import 'package:arif/src/state/session_controller.dart';
 import 'package:arif_core/arif_core.dart';
 import 'package:arif_rpc/arif_rpc.dart';
 
-/// Motrix-style HTTP(S) add-download form.
+/// 添加 HTTP(S)/FTP 下载表单（字段对齐 Motrix AddTask 的 URI 页）。
+///
+/// 提交时调用 [SessionController.addHttpDownload]。
 class AddHttpPage extends StatefulWidget {
   const AddHttpPage({super.key, required this.session});
 

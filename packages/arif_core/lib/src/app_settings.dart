@@ -1,6 +1,8 @@
 import 'http_download.dart';
 
-/// Lightweight app-level download defaults (not full preference store yet).
+/// 应用级下载默认值（尚未做持久化；仅内存，重启丢失）。
+///
+/// 添加任务时若表单未填 dir/UA/split，会落到这里。
 class AppDownloadSettings {
   const AppDownloadSettings({
     this.defaultDir,
@@ -10,12 +12,19 @@ class AppDownloadSettings {
     this.continueDownload = true,
   });
 
+  /// 默认下载目录。
   final String? defaultDir;
+
+  /// 默认 split。
   final int split;
+
+  /// 默认 max-connection-per-server。
   final int maxConnectionPerServer;
+
   final String? userAgent;
   final bool continueDownload;
 
+  /// 用当前默认值拼一份 [HttpDownloadOptions]，再可被单次请求覆盖。
   HttpDownloadOptions toHttpOptions({
     String? out,
     String? dir,

@@ -1,4 +1,4 @@
-/// Error returned by aria2 JSON-RPC or the transport layer.
+/// JSON-RPC 业务错误或 HTTP 传输错误。
 class Aria2Exception implements Exception {
   Aria2Exception({
     this.code,

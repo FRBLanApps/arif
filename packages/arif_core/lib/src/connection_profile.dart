@@ -1,15 +1,17 @@
 import 'package:arif_rpc/arif_rpc.dart';
 
-/// Whether the app talks to a bundled local engine or a remote instance.
+/// 连接模式：本地托管引擎 vs 只连已有 RPC。
 enum EngineMode {
-  /// Spawn / embed local aria2-next, then RPC to localhost.
+  /// 本地：优先复用本机端口上的 aria2；没有则由 arif_engine 拉起进程。
   local,
 
-  /// Only connect to an existing RPC endpoint.
+  /// 远程：只连 host:port，不 spawn 引擎。
   remote,
 }
 
-/// User-facing connection profile (local engine or remote RPC).
+/// 用户可见的「连接配置」：模式 + RPC 端点。
+///
+/// UI 存在 Connections 页；Session 连接时读 [mode] 决定是否 ensureRunning。
 class ConnectionProfile {
   const ConnectionProfile({
     required this.id,
@@ -21,6 +23,8 @@ class ConnectionProfile {
   final String id;
   final String name;
   final EngineMode mode;
+
+  /// JSON-RPC 地址（host/port/secret/TLS）。
   final RpcConnectionConfig rpc;
 
   bool get isLocal => mode == EngineMode.local;
@@ -61,7 +65,7 @@ class ConnectionProfile {
     );
   }
 
-  /// Default local engine profile (loopback RPC).
+  /// 默认本地配置：127.0.0.1:6800，无 secret。
   static ConnectionProfile localDefault({
     String id = 'local',
     int port = 6800,

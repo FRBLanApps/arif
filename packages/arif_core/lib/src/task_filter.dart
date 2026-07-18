@@ -1,6 +1,6 @@
 import 'task_status.dart';
 
-/// Task list segment matching AriaNg-style tabs.
+/// 任务列表 Tab 筛选（与 [TaskBucket] 对应，多一个「全部」）。
 enum TaskFilter {
   all,
   active,
@@ -9,6 +9,7 @@ enum TaskFilter {
 }
 
 extension TaskFilterX on TaskFilter {
+  /// 判断某个 [TaskStatus] 是否属于当前 Tab。
   bool matchesStatus(TaskStatus status) {
     switch (this) {
       case TaskFilter.all:
@@ -22,6 +23,7 @@ extension TaskFilterX on TaskFilter {
     }
   }
 
+  /// 直接对 RPC 的 status 字符串做筛选。
   bool matchesWireStatus(String? status) =>
       matchesStatus(parseTaskStatus(status));
 }

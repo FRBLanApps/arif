@@ -1,6 +1,6 @@
 import 'dart:io';
 
-/// Returns true if something is already accepting TCP on [port] at [host].
+/// 探测 [host]:[port] 是否已有进程在监听（TCP connect 成功即视为占用）。
 Future<bool> isPortOpen(
   int port, {
   String host = '127.0.0.1',
@@ -15,7 +15,9 @@ Future<bool> isPortOpen(
   }
 }
 
-/// Finds a free TCP port, preferring [preferred] when available.
+/// 找空闲 TCP 端口：优先 [preferred]，否则在 [searchFrom]–[searchTo] 扫描。
+///
+/// 区间内都忙则让 OS 分配临时端口（bind 0）。
 Future<int> findFreePort({
   int preferred = 6800,
   int searchFrom = 6800,
@@ -31,7 +33,6 @@ Future<int> findFreePort({
       return port;
     }
   }
-  // OS-assigned ephemeral
   final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
   final port = server.port;
   await server.close();

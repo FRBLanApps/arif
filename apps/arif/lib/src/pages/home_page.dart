@@ -9,6 +9,9 @@ import 'package:arif/src/widgets/task_tile.dart';
 import 'package:arif_core/arif_core.dart';
 import 'package:arif_rpc/arif_rpc.dart';
 
+/// 任务壳首页：连接状态、分栏列表、添加 HTTP 下载入口。
+///
+/// 所有数据来自 [SessionController]；本页不直接调 RPC。
 class HomePage extends StatefulWidget {
   const HomePage({
     super.key,

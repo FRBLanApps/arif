@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:arif_rpc/arif_rpc.dart';
 
-/// Polls [config] until `aria2.getVersion` succeeds or [timeout] elapses.
+/// 轮询 [config] 直到 `aria2.getVersion` 成功，或超时。
+///
+/// 进程刚 spawn 时 RPC 尚未监听，需要短暂重试（Motrix / 多数 sidecar 同理）。
 Future<VersionInfo> waitForRpcReady(
   RpcConnectionConfig config, {
   Duration timeout = const Duration(seconds: 15),

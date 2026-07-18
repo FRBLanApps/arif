@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// App-level locale override. `null` follows the system locale.
+/// 界面语言覆盖；`null` 表示跟随系统。
 class LocaleController extends ChangeNotifier {
   Locale? _locale;
 

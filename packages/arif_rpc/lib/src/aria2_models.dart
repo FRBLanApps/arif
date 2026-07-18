@@ -1,4 +1,6 @@
-/// Global transfer statistics from `aria2.getGlobalStat`.
+// RPC 响应模型。aria2 常把数字以字符串返回，fromJson 里统一 _asInt。
+
+/// `aria2.getGlobalStat` 的全局上下行与任务计数。
 class GlobalStat {
   const GlobalStat({
     required this.downloadSpeed,
@@ -28,7 +30,9 @@ class GlobalStat {
   }
 }
 
-/// Download task snapshot from tell* RPC methods.
+/// 单个下载任务快照（tellActive / tellWaiting / tellStopped / tellStatus）。
+///
+/// [status] 为 wire 字符串；业务判断请用 arif_core 的 [parseTaskStatus]。
 class DownloadTask {
   const DownloadTask({
     required this.gid,
@@ -68,6 +72,7 @@ class DownloadTask {
   final String? belongsTo;
   final String? infoHash;
 
+  /// 0.0–1.0；总长度未知时为 0。
   double get progress {
     if (totalLength <= 0) return 0;
     return completedLength / totalLength;
@@ -78,7 +83,7 @@ class DownloadTask {
     return left < 0 ? 0 : left;
   }
 
-  /// ETA in seconds when speed > 0 and total known; otherwise null.
+  /// 剩余秒数；速度为 0 或未知总长时返回 null。
   int? get etaSeconds {
     if (downloadSpeed <= 0 || totalLength <= 0) return null;
     final left = remainingLength;
@@ -86,6 +91,7 @@ class DownloadTask {
     return (left / downloadSpeed).ceil();
   }
 
+  /// 列表展示名：优先文件路径 basename，其次 URI 最后一段，否则 gid。
   String get displayName {
     if (files.isNotEmpty) {
       final path = files.first.path;

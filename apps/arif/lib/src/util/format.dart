@@ -1,3 +1,4 @@
+/// 字节 → `1.2 MB` 一类展示字符串。
 String formatBytes(int bytes) {
   if (bytes < 0) bytes = 0;
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -11,8 +12,10 @@ String formatBytes(int bytes) {
   return '${value.toStringAsFixed(digits)} ${units[unit]}';
 }
 
+/// 字节/秒 → `1.2 MB/s`。
 String formatSpeed(int bytesPerSecond) => '${formatBytes(bytesPerSecond)}/s';
 
+/// 0–1 → 百分比文案。
 String formatProgress(double progress) {
   final pct = (progress * 100).clamp(0, 100);
   if (pct >= 100) return '100%';
@@ -20,6 +23,7 @@ String formatProgress(double progress) {
   return '${pct.toStringAsFixed(2)}%';
 }
 
+/// 剩余秒数 → `1m 30s` / `—`。
 String formatEta(int? seconds) {
   if (seconds == null) return '—';
   if (seconds < 0) return '—';

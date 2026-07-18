@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-/// Candidate executable basenames (aria2-next preferred, stock aria2 fallback).
+/// 查找本地引擎可执行文件时的候选文件名（优先 aria2-next）。
 const kEngineBinaryNames = <String>[
   'aria2-next',
   'aria2-next.exe',
@@ -10,7 +10,9 @@ const kEngineBinaryNames = <String>[
   'aria2c.exe',
 ];
 
-/// Resolves where the local engine binary lives.
+/// 解析本机 `aria2-next` / `aria2c` 路径。
+///
+/// 搜索顺序见 [find]。测试可注入 [environment] / [pathEnv] / [bundledSearchDirs]。
 class EngineBinaryLocator {
   const EngineBinaryLocator({
     this.bundledSearchDirs = const [],
@@ -18,23 +20,25 @@ class EngineBinaryLocator {
     this.pathEnv,
   });
 
-  /// Extra directories to search (e.g. app assets extract dir, tool/dist).
+  /// 额外搜索目录（如 `tool/dist/engine`、App 解压目录）。
   final List<String> bundledSearchDirs;
 
-  /// Override env map (tests). Defaults to [Platform.environment] when empty.
+  /// 非空时覆盖 [Platform.environment]（单测用）。
   final Map<String, String> environment;
 
-  /// Override PATH string (tests).
+  /// 非空时覆盖 PATH 字符串（单测用）。
   final String? pathEnv;
 
   Map<String, String> get _env =>
       environment.isEmpty ? Platform.environment : environment;
 
-  /// Search order:
-  /// 1. `ARIF_ENGINE_PATH` / `ARIA2_PATH` absolute file
+  /// 返回绝对路径；找不到返回 null。
+  ///
+  /// 顺序：
+  /// 1. 环境变量 `ARIF_ENGINE_PATH` / `ARIA2_PATH`（必须是已存在文件）
   /// 2. [bundledSearchDirs]
-  /// 3. directories on PATH
-  /// 4. common install prefixes (Unix)
+  /// 3. PATH 中各目录
+  /// 4. 常见 Unix 安装前缀
   Future<String?> find() async {
     final fromEnv = await _fromEnvVars();
     if (fromEnv != null) return fromEnv;
@@ -83,6 +87,7 @@ class EngineBinaryLocator {
     return null;
   }
 
+  /// 在目录内找标准名，或 `aria2-next-*` 版本化 release 文件名。
   Future<String?> _findInDir(String dir) async {
     final directory = Directory(dir);
     if (!await directory.exists()) return null;
@@ -92,7 +97,6 @@ class EngineBinaryLocator {
         return candidate.absolute.path;
       }
     }
-    // Also match versioned release names: aria2-next-2.5.1-linux-x86_64
     try {
       await for (final entity in directory.list(followLinks: true)) {
         if (entity is! File) continue;
@@ -110,12 +114,13 @@ class EngineBinaryLocator {
   }
 }
 
-/// Default data directories for a local engine under [root].
+/// 本地引擎数据目录布局：downloads + session 等。
 class EngineDataPaths {
   EngineDataPaths({
     required this.root,
   });
 
+  /// 根目录，例如 `~/.local/share/arif`。
   final String root;
 
   String get downloadDir => p.join(root, 'downloads');
@@ -123,6 +128,7 @@ class EngineDataPaths {
   String get confPath => p.join(root, 'aria2.conf');
   String get logPath => p.join(root, 'aria2.log');
 
+  /// 创建下载目录与空 session 文件（若不存在）。
   Future<void> ensure() async {
     await Directory(downloadDir).create(recursive: true);
     await Directory(root).create(recursive: true);

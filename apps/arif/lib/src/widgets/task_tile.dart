@@ -4,6 +4,9 @@ import 'package:arif/src/util/format.dart';
 import 'package:arif_core/arif_core.dart';
 import 'package:arif_rpc/arif_rpc.dart';
 
+/// 任务列表一行：名称、进度、速度、ETA、暂停/继续/删除。
+///
+/// [onTap] 一般进详情；按钮用 [TaskStatus.canPause] / [canResume]。
 class TaskTile extends StatelessWidget {
   const TaskTile({
     super.key,

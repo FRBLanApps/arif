@@ -5,6 +5,7 @@ import 'package:arif_core/arif_core.dart';
 import 'package:arif_engine/arif_engine.dart';
 import 'package:arif_rpc/arif_rpc.dart';
 
+/// 会话连接阶段（驱动 Home 状态条 / 空状态页）。
 enum SessionPhase {
   disconnected,
   connecting,
@@ -12,10 +13,25 @@ enum SessionPhase {
   error,
 }
 
-/// Manages a remote/local aria2 JSON-RPC session and polls task state.
+/// App 侧「会话」中枢：连引擎、轮询任务、增删改下载。
 ///
-/// Local profiles may start a process sidecar via [LocalEngineService]
-/// (Motrix Next–style). Remote profiles only connect to an existing RPC.
+/// ## 分层
+/// ```
+/// UI (Home / AddHttp / Connections)
+///   → SessionController          // 本类
+///     → LocalEngineService       // 仅 local 模式：复用或 spawn
+///     → Aria2Client              // JSON-RPC
+/// ```
+///
+/// ## 连接策略
+/// - [EngineMode.local]：先 [LocalEngineService.ensureRunning]（可复用本机已有 aria2），
+///   再 RPC；强制 host=127.0.0.1、无 TLS。
+/// - [EngineMode.remote]：只连用户填的 host:port。
+///
+/// ## 并发注意
+/// - [connect] 串行，避免连点两次起两个引擎。
+/// - [_connectGeneration] / [_pollGeneration] 丢弃过期的异步结果。
+/// - [refresh] 用 [_refreshInFlight] 防止 1s 定时器叠请求。
 class SessionController extends ChangeNotifier {
   SessionController({
     ConnectionProfile? profile,
@@ -29,12 +45,13 @@ class SessionController extends ChangeNotifier {
         _engine = engineService ?? LocalEngineService(),
         _ownsEngine = engineService == null;
 
+  /// 测试注入的 Client（跳过真实网络 / 本地引擎）。
   final Aria2Client? _injectedClient;
   final Duration _pollInterval;
   final LocalEngineService _engine;
   final bool _ownsEngine;
 
-  /// When true and profile is local, try spawn/reuse engine before RPC connect.
+  /// local 模式下是否自动 ensureRunning。
   final bool autoStartLocalEngine;
 
   ConnectionProfile _profile;
@@ -44,14 +61,24 @@ class SessionController extends ChangeNotifier {
   String? _errorMessage;
   String? _engineVersion;
   GlobalStat? _globalStat;
+
+  /// 与 aria2 tell* 三列表对应（paused 在 waiting 里）。
   List<DownloadTask> _active = const [];
   List<DownloadTask> _waiting = const [];
   List<DownloadTask> _stopped = const [];
+
   TaskFilter _filter = TaskFilter.active;
   bool _disposed = false;
+
+  /// 每次 disconnect / 新一轮 poll 递增，用于作废 in-flight 的 refresh。
   int _pollGeneration = 0;
+
+  /// 每次 connect 递增，用于作废过期的 connect 异步步骤。
   int _connectGeneration = 0;
+
+  /// 当前进行中的 connect Future（串行化入口）。
   Future<void>? _connectInFlight;
+
   bool _refreshInFlight = false;
 
   ConnectionProfile get profile => _profile;
@@ -64,6 +91,8 @@ class SessionController extends ChangeNotifier {
   bool get isConnecting => _phase == SessionPhase.connecting;
   Aria2Client? get client => _client;
   LocalEngineService get engine => _engine;
+
+  /// 我们 spawn 的引擎是否在跑（复用外部 aria2 时为 false）。
   bool get localEngineRunning => _engine.isManagedRunning;
   String? get localEngineBinary => _engine.resolvedBinary;
 
@@ -81,10 +110,13 @@ class SessionController extends ChangeNotifier {
 
   List<DownloadTask> get allTasks => [..._active, ..._waiting, ..._stopped];
 
+  /// 当前 Tab 可见任务。
+  ///
+  /// 注意：直接使用 aria2 三列表，而不是再按 [TaskStatus.bucket] 过滤一遍，
+  /// 这样与引擎侧分类一致（paused 在 waiting 列表）。
   List<DownloadTask> get visibleTasks {
     switch (_filter) {
       case TaskFilter.active:
-        // aria2 "active" list; paused lives in waiting.
         return _active;
       case TaskFilter.waiting:
         return _waiting;
@@ -108,6 +140,7 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 更新连接配置；[reconnect] 时会 [connect]。
   Future<void> updateProfile(
     ConnectionProfile profile, {
     bool reconnect = true,
@@ -119,9 +152,10 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// 建立会话（可重复调用；会串行、会取消过期结果）。
   Future<void> connect() async {
     if (_disposed) return;
-    // Serialize connect attempts so double-taps cannot spawn two engines.
+    // 若已有 connect 在飞：等它结束；已连上则直接返回，避免双开引擎。
     final previous = _connectInFlight;
     if (previous != null) {
       await previous;
@@ -142,13 +176,12 @@ class SessionController extends ChangeNotifier {
   Future<void> _connectImpl() async {
     final gen = ++_connectGeneration;
 
-    // Always tear down previous RPC client. Stop managed engine when leaving
-    // local mode, or when reconnecting local (ensureRunning will re-attach).
+    // 拆掉旧 RPC。离开 local 或关闭 autoStart 时顺带停托管引擎。
     final stopEngine = !_profile.isLocal || !autoStartLocalEngine;
     await disconnect(notify: false, stopLocalEngine: stopEngine);
     if (_disposed || gen != _connectGeneration) return;
 
-    // Local reconnect: stop previous managed host so port/config can change.
+    // local 重连：先停旧托管进程，方便换端口/密钥后 ensureRunning。
     if (_profile.isLocal && autoStartLocalEngine) {
       await _engine.stop();
     }
@@ -164,7 +197,7 @@ class SessionController extends ChangeNotifier {
       var rpc = _profile.rpc;
 
       if (_profile.isLocal && autoStartLocalEngine && _injectedClient == null) {
-        // Local engine always listens on loopback.
+        // 本地引擎只听回环。
         rpc = rpc.copyWith(host: '127.0.0.1', useTls: false);
         managedSpawnAttempted = true;
         final ensured = await _engine.ensureRunning(
@@ -176,6 +209,7 @@ class SessionController extends ChangeNotifier {
           await _engine.stop();
           return;
         }
+        // ensureRunning 可能因端口冲突换了 port。
         rpc = ensured;
         _profile = _profile.copyWith(
           rpc: rpc.copyWith(host: '127.0.0.1', useTls: false),
@@ -212,7 +246,7 @@ class SessionController extends ChangeNotifier {
     } catch (e) {
       if (_disposed || gen != _connectGeneration) return;
 
-      // Do not leave an orphan managed process after a failed connect.
+      // 连接失败不要留下我们拉起的孤儿进程。
       if (managedSpawnAttempted && _engine.isManagedRunning) {
         await _engine.stop();
       }
@@ -230,6 +264,7 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// 断开 RPC 轮询；[stopLocalEngine] 为 true 时停止我们托管的引擎进程。
   Future<void> disconnect({
     bool notify = true,
     bool stopLocalEngine = true,
@@ -267,6 +302,7 @@ class SessionController extends ChangeNotifier {
     _timer = null;
   }
 
+  /// 拉取全局统计 + 三列表。失败会进入 [SessionPhase.error] 并停轮询。
   Future<void> refresh() async {
     final client = _client;
     if (client == null || _phase != SessionPhase.connected) return;
@@ -301,6 +337,7 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// 简便入口：把字符串当 URI 列表，按镜像合成一个任务。
   Future<String> addUri(String uri, {Map<String, String>? options}) async {
     final gids = await addHttpDownload(
       HttpDownloadRequest(
@@ -323,7 +360,10 @@ class SessionController extends ChangeNotifier {
     return gids.first;
   }
 
-  /// Add HTTP(S)/FTP downloads. Returns created GIDs.
+  /// 添加 HTTP(S)/FTP 下载，返回新建 GID 列表。
+  ///
+  /// - [HttpDownloadRequest.asMirrors] 或仅 1 个 URI：一次 addUri
+  /// - 否则每个 URI 一个任务；多任务时去掉共享的 `out`，避免重名覆盖
   Future<List<String>> addHttpDownload(HttpDownloadRequest request) async {
     final client = _requireClient();
     if (request.isEmpty) {
@@ -337,7 +377,7 @@ class SessionController extends ChangeNotifier {
       );
     }
 
-    // Merge app defaults when request options omit dir/UA/split.
+    // 表单未填的项用 App 默认值补齐。
     final base = _downloadSettings.toHttpOptions(
       dir: request.options.dir,
       out: request.options.out,
@@ -363,7 +403,6 @@ class SessionController extends ChangeNotifier {
       gids.add(await client.addUri(request.uris, options: opts));
     } else {
       for (final uri in request.uris) {
-        // Per-URI: only first gets `out` if set (multi-file names differ).
         final perOpts = Map<String, String>.from(opts);
         if (request.uris.length > 1) {
           perOpts.remove('out');
@@ -375,7 +414,7 @@ class SessionController extends ChangeNotifier {
     try {
       await client.saveSession();
     } on Aria2Exception {
-      // Optional on some builds.
+      // 部分构建未开 session 时忽略。
     }
     await refresh();
     return gids;
@@ -401,6 +440,10 @@ class SessionController extends ChangeNotifier {
     await refresh();
   }
 
+  /// 删除任务。
+  ///
+  /// 已结束任务用 [Aria2Client.removeDownloadResult]；
+  /// 进行中用 remove / forceRemove。默认不立刻 purge，方便在 stopped 列表里再看到。
   Future<void> remove(String gid, {bool purgeResult = false}) async {
     final client = _requireClient();
     final task = findTask(gid);
@@ -417,7 +460,7 @@ class SessionController extends ChangeNotifier {
         try {
           await client.removeDownloadResult(gid);
         } on Aria2Exception {
-          // Result may already be gone.
+          // 结果可能已不存在。
         }
       }
     }
@@ -429,6 +472,7 @@ class SessionController extends ChangeNotifier {
     await refresh();
   }
 
+  /// 清空已停止任务结果列表（purgeDownloadResult）。
   Future<void> purgeStopped() async {
     await _requireClient().purgeDownloadResult();
     await refresh();

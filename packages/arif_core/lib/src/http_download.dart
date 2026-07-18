@@ -1,6 +1,10 @@
-/// Options for a single HTTP(S)/FTP-style `aria2.addUri` task.
+// HTTP(S)/FTP 下载的领域模型与工具。
+// UI / Session 构造 HttpDownloadRequest，再 toAria2Options 交给 aria2.addUri。
+// 设计参考 Motrix Next 的 AddTask 表单字段。
+
+/// 单次 `aria2.addUri` 的下载选项。
 ///
-/// Maps to aria2 option keys used by Motrix Next / AriaNg for basic downloads.
+/// 字段名与 aria2 配置键对应，见各成员注释。
 class HttpDownloadOptions {
   const HttpDownloadOptions({
     this.dir,
@@ -16,32 +20,40 @@ class HttpDownloadOptions {
     this.extra = const {},
   });
 
-  /// Download directory (`dir`).
+  /// 保存目录，对应 aria2 `dir`。
   final String? dir;
 
-  /// Output file name (`out`).
+  /// 输出文件名，对应 `out`（不含路径）。
   final String? out;
 
-  /// Number of connections per download (`split`).
+  /// 分片连接数，对应 `split`。
   final int split;
 
-  /// Max connections to one server (`max-connection-per-server`).
+  /// 对同一服务器的最大连接数，对应 `max-connection-per-server`。
   final int maxConnectionPerServer;
 
+  /// HTTP Referer。
   final String? referer;
+
+  /// User-Agent。
   final String? userAgent;
 
-  /// Extra HTTP headers as `Header: value` lines.
+  /// 额外 HTTP 头，每项形如 `Header-Name: value`。
   final List<String> headers;
 
+  /// 是否断点续传（`continue=true`）。
   final bool continueDownload;
+
+  /// 最大重试次数（`max-tries`）。
   final int? maxTries;
+
+  /// 超时秒数（`timeout`）。
   final int? timeout;
 
-  /// Additional raw aria2 options (override same keys if present).
+  /// 额外原始 aria2 选项；同名键会覆盖上面已生成的项。
   final Map<String, String> extra;
 
-  /// aria2 option map for JSON-RPC.
+  /// 转为 JSON-RPC 可用的 `Map<optionName, value>`。
   Map<String, String> toAria2Options() {
     final map = <String, String>{
       if (dir != null && dir!.trim().isNotEmpty) 'dir': dir!.trim(),
@@ -58,8 +70,7 @@ class HttpDownloadOptions {
       ...extra,
     };
 
-    // aria2 accepts multiple `header` via repeated keys in some UIs;
-    // JSON-RPC uses a single string with newlines for multiple headers.
+    // JSON-RPC 里多个 header 用换行拼进同一个 `header` 字符串。
     if (headers.isNotEmpty) {
       final cleaned = headers
           .map((e) => e.trim())
@@ -102,7 +113,7 @@ class HttpDownloadOptions {
   }
 }
 
-/// One or more HTTP(S) URIs to download (mirrors share one task when [asMirrors]).
+/// 一次「添加 HTTP 下载」请求：URI 列表 + 选项 + 是否镜像。
 class HttpDownloadRequest {
   const HttpDownloadRequest({
     required this.uris,
@@ -113,14 +124,14 @@ class HttpDownloadRequest {
   final List<String> uris;
   final HttpDownloadOptions options;
 
-  /// When true, all URIs go into a single addUri as mirrors.
-  /// When false (default), each URI becomes its own task (Motrix-style multi-line).
+  /// true：全部 URI 作为同一文件的镜像（一次 addUri，一个 GID）。
+  /// false：每行 URI 各自一个任务（Motrix 多行默认行为）。
   final bool asMirrors;
 
   bool get isEmpty => uris.isEmpty;
 }
 
-/// Parse multi-line / whitespace-separated URI input into a clean list.
+/// 把多行/空白分隔的输入解析成去重后的 URI 列表（保持首次出现顺序）。
 List<String> parseUriList(String raw) {
   final lines = raw
       .split(RegExp(r'[\r\n]+'))
@@ -137,7 +148,7 @@ List<String> parseUriList(String raw) {
   return result;
 }
 
-/// Basic HTTP(S)/FTP scheme check for UI validation.
+/// UI 层校验：当前 V1 只接受 http(s)/ftp(s)。磁力/BT 后续再开。
 bool isSupportedHttpUri(String uri) {
   final lower = uri.toLowerCase();
   return lower.startsWith('http://') ||
@@ -146,7 +157,7 @@ bool isSupportedHttpUri(String uri) {
       lower.startsWith('ftps://');
 }
 
-/// Guess a filename from a URL path (for optional `out` default).
+/// 从 URL path 猜文件名（供可选默认 `out`）。
 String? guessFilenameFromUri(String uri) {
   try {
     final parsed = Uri.parse(uri);

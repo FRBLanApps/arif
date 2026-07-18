@@ -7,17 +7,24 @@ import 'aria2_exception.dart';
 import 'aria2_models.dart';
 import 'connection_config.dart';
 
-/// Minimal aria2 JSON-RPC 2.0 client (HTTP).
+/// aria2 / aria2-next 的 JSON-RPC 2.0 客户端（仅 HTTP POST）。
 ///
-/// Compatible with official aria2 and aria2-next RPC shapes.
+/// - 方法名带 `aria2.` 前缀，与官方手册一致
+/// - [call] 自动在 params 前插入 `token:secret`（若配置了 secret）
+/// - 数值字段在引擎侧多为字符串，模型层负责解析
+///
+/// UI 层建议经 SessionController 使用，便于轮询与生命周期统一。
 class Aria2Client {
   Aria2Client({
     required this.config,
     http.Client? httpClient,
   }) : _http = httpClient ?? http.Client();
 
+  /// 当前端点；引擎换端口后可改此字段或新建 Client。
   RpcConnectionConfig config;
   final http.Client _http;
+
+  /// JSON-RPC id 递增，仅用于匹配响应。
   int _id = 0;
 
   Future<VersionInfo> getVersion() async {
@@ -186,9 +193,13 @@ class Aria2Client {
     return result as String;
   }
 
-  /// Low-level JSON-RPC call. Automatically injects `token:` secret.
+  /// 底层 JSON-RPC 调用。
+  ///
+  /// [method] 完整方法名，例如 `aria2.addUri`。
+  /// [params] **不要**自己带 token；有 secret 时会自动插在列表最前。
   Future<Object?> call(String method, [List<Object?> params = const []]) async {
     final id = ++_id;
+    // aria2 认证：params[0] = "token:<secret>"
     final finalParams = <Object?>[
       if (config.secret != null && config.secret!.isNotEmpty)
         'token:${config.secret}',
@@ -232,6 +243,7 @@ class Aria2Client {
     }
 
     final map = Map<String, dynamic>.from(decoded);
+    // JSON-RPC 错误对象：{ code, message, data? }
     if (map['error'] != null) {
       final err = Map<String, dynamic>.from(map['error'] as Map);
       throw Aria2Exception(

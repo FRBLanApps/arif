@@ -5,6 +5,9 @@ import 'package:arif/src/state/session_controller.dart';
 import 'package:arif_core/arif_core.dart';
 import 'package:arif_rpc/arif_rpc.dart';
 
+/// 连接配置页：本地引擎 / 远程 RPC、host/port/secret。
+///
+/// 「连接」按钮 → [SessionController.updateProfile] → connect。
 class ConnectionsPage extends StatefulWidget {
   const ConnectionsPage({super.key, required this.session});
 
