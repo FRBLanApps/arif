@@ -343,6 +343,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Version {version}'**
   String versionLabel(String version);
+
+  /// No description provided for @connect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get connect;
+
+  /// No description provided for @disconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get disconnect;
+
+  /// No description provided for @reconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect'**
+  String get reconnect;
+
+  /// No description provided for @connectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a local or remote aria2 JSON-RPC endpoint (default 127.0.0.1:6800).'**
+  String get connectHint;
+
+  /// No description provided for @remoteRpcHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to an already-running aria2 / aria2-next instance. Enable RPC with --enable-rpc.'**
+  String get remoteRpcHint;
+
+  /// No description provided for @useTls.
+  ///
+  /// In en, this message translates to:
+  /// **'Use TLS'**
+  String get useTls;
+
+  /// No description provided for @invalidPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid port (1–65535).'**
+  String get invalidPort;
+
+  /// No description provided for @engineVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'aria2 {version}'**
+  String engineVersion(String version);
+
+  /// No description provided for @taskAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added task {gid}'**
+  String taskAdded(String gid);
 }
 
 class _AppLocalizationsDelegate

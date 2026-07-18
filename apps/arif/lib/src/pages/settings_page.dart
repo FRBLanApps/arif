@@ -3,7 +3,10 @@ import 'package:arif/l10n/app_localizations.dart';
 import 'package:arif/src/state/locale_controller.dart';
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key, required this.localeController});
+  const SettingsPage({
+    super.key,
+    required this.localeController,
+  });
 
   final LocaleController localeController;
 
@@ -46,6 +49,13 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           const Divider(height: 32),
+          ListTile(
+            leading: const Icon(Icons.cloud_outlined),
+            title: Text(l10n.connections),
+            subtitle: Text(l10n.remoteRpcHint),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).pushNamed('/connections'),
+          ),
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(l10n.about),

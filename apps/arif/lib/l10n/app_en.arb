@@ -50,5 +50,29 @@
         "type": "String"
       }
     }
+  },
+  "connect": "Connect",
+  "disconnect": "Disconnect",
+  "reconnect": "Reconnect",
+  "connectHint": "Connect to a local or remote aria2 JSON-RPC endpoint (default 127.0.0.1:6800).",
+  "remoteRpcHint": "Talk to an already-running aria2 / aria2-next instance. Enable RPC with --enable-rpc.",
+  "useTls": "Use TLS",
+  "invalidPort": "Enter a valid port (1–65535).",
+  "engineVersion": "aria2 {version}",
+  "@engineVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "taskAdded": "Added task {gid}",
+  "@taskAdded": {
+    "placeholders": {
+      "gid": {
+        "type": "String"
+      }
+    }
   }
 }
+

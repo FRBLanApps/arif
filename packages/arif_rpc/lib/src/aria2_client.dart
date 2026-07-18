@@ -145,6 +145,21 @@ class Aria2Client {
     return result as String;
   }
 
+  Future<String> removeDownloadResult(String gid) async {
+    final result = await call('aria2.removeDownloadResult', [gid]);
+    return result as String;
+  }
+
+  Future<String> purgeDownloadResult() async {
+    final result = await call('aria2.purgeDownloadResult');
+    return result as String;
+  }
+
+  Future<String> saveSession() async {
+    final result = await call('aria2.saveSession');
+    return result as String;
+  }
+
   /// Low-level JSON-RPC call. Automatically injects `token:` secret.
   Future<Object?> call(String method, [List<Object?> params = const []]) async {
     final id = ++_id;
@@ -161,13 +176,22 @@ class Aria2Client {
       'params': finalParams,
     });
 
-    final response = await _http.post(
-      config.httpUri,
-      headers: const {
-        'Content-Type': 'application/json',
-      },
-      body: body,
-    );
+    late final http.Response response;
+    try {
+      response = await _http
+          .post(
+            config.httpUri,
+            headers: const {
+              'Content-Type': 'application/json',
+            },
+            body: body,
+          )
+          .timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      throw Aria2Exception(message: 'RPC timeout talking to ${config.httpUri}');
+    } on http.ClientException catch (e) {
+      throw Aria2Exception(message: 'RPC transport error: ${e.message}');
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Aria2Exception(

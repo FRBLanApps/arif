@@ -40,5 +40,15 @@
   "iosKeepAliveTitle": "iOS 后台保活",
   "iosKeepAliveSummary": "iOS 版本仅面向侧载 / 越狱。保活会滥用系统 API，无法上架 App Store。",
   "iosKeepAliveLearnMore": "了解更多",
-  "versionLabel": "版本 {version}"
+  "versionLabel": "版本 {version}",
+  "connect": "连接",
+  "disconnect": "断开",
+  "reconnect": "重新连接",
+  "connectHint": "连接到本机或远程 aria2 JSON-RPC（默认 127.0.0.1:6800）。",
+  "remoteRpcHint": "连接已在运行的 aria2 / aria2-next。请先用 --enable-rpc 开启 RPC。",
+  "useTls": "使用 TLS",
+  "invalidPort": "请输入有效端口（1–65535）。",
+  "engineVersion": "aria2 {version}",
+  "taskAdded": "已添加任务 {gid}"
 }
+

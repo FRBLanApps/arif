@@ -27,7 +27,23 @@ third_party/aria2-next  git submodule / shallow fork patches
 
 ## Control plane rule
 
-UI only talks to `Aria2Client`. Local engine start is an implementation detail of `EngineHost`.
+UI only talks to `SessionController` → `Aria2Client` (JSON-RPC).  
+Local engine start is an implementation detail of `EngineHost` (not required for remote RPC).
+
+### Current RPC flow (V1)
+
+```
+App start
+  → SessionController.connect()  // default 127.0.0.1:6800
+  → aria2.getVersion
+  → poll every 1s: getGlobalStat + tellActive/Waiting/Stopped
+UI
+  → addUri / pause / unpause / remove
+Connections page
+  → edit host/port/secret/TLS and reconnect
+```
+
+Compatible with stock aria2 and aria2-next (Motrix Next–style method set).
 
 ## Tooling
 

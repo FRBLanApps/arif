@@ -133,4 +133,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String versionLabel(String version) {
     return '版本 $version';
   }
+
+  @override
+  String get connect => '连接';
+
+  @override
+  String get disconnect => '断开';
+
+  @override
+  String get reconnect => '重新连接';
+
+  @override
+  String get connectHint => '连接到本机或远程 aria2 JSON-RPC（默认 127.0.0.1:6800）。';
+
+  @override
+  String get remoteRpcHint =>
+      '连接已在运行的 aria2 / aria2-next。请先用 --enable-rpc 开启 RPC。';
+
+  @override
+  String get useTls => '使用 TLS';
+
+  @override
+  String get invalidPort => '请输入有效端口（1–65535）。';
+
+  @override
+  String engineVersion(String version) {
+    return 'aria2 $version';
+  }
+
+  @override
+  String taskAdded(String gid) {
+    return '已添加任务 $gid';
+  }
 }

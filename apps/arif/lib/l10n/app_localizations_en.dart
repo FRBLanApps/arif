@@ -134,4 +134,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String versionLabel(String version) {
     return 'Version $version';
   }
+
+  @override
+  String get connect => 'Connect';
+
+  @override
+  String get disconnect => 'Disconnect';
+
+  @override
+  String get reconnect => 'Reconnect';
+
+  @override
+  String get connectHint =>
+      'Connect to a local or remote aria2 JSON-RPC endpoint (default 127.0.0.1:6800).';
+
+  @override
+  String get remoteRpcHint =>
+      'Talk to an already-running aria2 / aria2-next instance. Enable RPC with --enable-rpc.';
+
+  @override
+  String get useTls => 'Use TLS';
+
+  @override
+  String get invalidPort => 'Enter a valid port (1–65535).';
+
+  @override
+  String engineVersion(String version) {
+    return 'aria2 $version';
+  }
+
+  @override
+  String taskAdded(String gid) {
+    return 'Added task $gid';
+  }
 }
