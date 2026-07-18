@@ -38,7 +38,6 @@ class _ArifAppState extends State<ArifApp> {
           profile: ConnectionProfile.localDefault(),
         );
     if (widget.autoConnect) {
-      // Connect to existing local aria2 (127.0.0.1:6800) by default.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _session.connect();
       });
@@ -89,8 +88,10 @@ class _ArifAppState extends State<ArifApp> {
                   localeController: _localeController,
                   session: _session,
                 ),
-            '/settings': (_) =>
-                SettingsPage(localeController: _localeController),
+            '/settings': (_) => SettingsPage(
+                  localeController: _localeController,
+                  session: _session,
+                ),
             '/connections': (_) => ConnectionsPage(session: _session),
             '/ios-keep-alive': (_) => const IosKeepAlivePage(),
           },

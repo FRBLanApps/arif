@@ -79,7 +79,59 @@
   "modeRemote": "Remote RPC only",
   "localEngineHint": "Reuse RPC on this port if aria2 is already running; otherwise start a managed aria2-next/aria2c process.",
   "engineBinary": "Engine binary",
-  "engineBinaryMissing": "Not found (install aria2 or set ARIF_ENGINE_PATH)"
+  "engineBinaryMissing": "Not found (install aria2 or set ARIF_ENGINE_PATH)",
+  "addHttpTask": "Add HTTP download",
+  "urisLabel": "URLs",
+  "uriHintMulti": "https://example.com/a.zip\nhttps://example.com/b.zip",
+  "uriMultiHint": "One URL per line. Multiple lines create separate tasks unless “mirrors” is enabled.",
+  "asMirrors": "Use as mirrors",
+  "asMirrorsHint": "All URLs download the same file (single task).",
+  "downloadOptions": "Options",
+  "downloadDir": "Download directory",
+  "downloadDirHint": "Leave empty to use engine default",
+  "fileName": "File name",
+  "fileNameHint": "Optional output name (out)",
+  "connectionsSplit": "Connections (split)",
+  "connectionsSplitHint": "aria2 split / max-connection-per-server",
+  "referer": "Referer",
+  "userAgent": "User-Agent",
+  "startDownload": "Start download",
+  "adding": "Adding…",
+  "emptyUris": "Enter at least one URL.",
+  "unsupportedUri": "Unsupported URI: {uri}",
+  "@unsupportedUri": {
+    "placeholders": {
+      "uri": { "type": "String" }
+    }
+  },
+  "tasksAdded": "Added {count} task(s)",
+  "@tasksAdded": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "taskDetail": "Task detail",
+  "taskNotFound": "Task not found",
+  "status": "Status",
+  "gid": "GID",
+  "eta": "ETA",
+  "uri": "URI",
+  "error": "Error",
+  "files": "Files",
+  "copied": "Copied",
+  "pauseAll": "Pause all",
+  "resumeAll": "Resume all",
+  "statusActive": "active",
+  "statusWaiting": "waiting",
+  "statusPaused": "paused",
+  "statusComplete": "complete",
+  "statusError": "error",
+  "statusRemoved": "removed",
+  "defaultDownloadDir": "Default download directory",
+  "downloadDefaults": "Download defaults",
+  "save": "Save"
 }
+
+
 
 

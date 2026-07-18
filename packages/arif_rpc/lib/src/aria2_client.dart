@@ -133,6 +133,32 @@ class Aria2Client {
     return result as String;
   }
 
+  Future<String> forcePauseAll() async {
+    final result = await call('aria2.forcePauseAll');
+    return result as String;
+  }
+
+  Future<Map<String, String>> getOption(String gid) async {
+    final result = await call('aria2.getOption', [gid]);
+    return Map<String, String>.from(
+      (result as Map).map((k, v) => MapEntry(k.toString(), v.toString())),
+    );
+  }
+
+  Future<String> changeOption(String gid, Map<String, String> options) async {
+    final result = await call('aria2.changeOption', [gid, options]);
+    return result as String;
+  }
+
+  Future<List<DownloadFile>> getFiles(String gid) async {
+    final result = await call('aria2.getFiles', [gid]);
+    if (result is! List) return const [];
+    return result
+        .whereType<Map>()
+        .map((e) => DownloadFile.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
   Future<Map<String, String>> getGlobalOption() async {
     final result = await call('aria2.getGlobalOption');
     return Map<String, String>.from(

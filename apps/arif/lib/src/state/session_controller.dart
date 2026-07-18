@@ -71,17 +71,35 @@ class SessionController extends ChangeNotifier {
   List<DownloadTask> get waitingTasks => _waiting;
   List<DownloadTask> get stoppedTasks => _stopped;
 
+  AppDownloadSettings _downloadSettings = const AppDownloadSettings();
+  AppDownloadSettings get downloadSettings => _downloadSettings;
+
+  void updateDownloadSettings(AppDownloadSettings settings) {
+    _downloadSettings = settings;
+    notifyListeners();
+  }
+
+  List<DownloadTask> get allTasks => [..._active, ..._waiting, ..._stopped];
+
   List<DownloadTask> get visibleTasks {
     switch (_filter) {
       case TaskFilter.active:
+        // aria2 "active" list; paused lives in waiting.
         return _active;
       case TaskFilter.waiting:
         return _waiting;
       case TaskFilter.stopped:
         return _stopped;
       case TaskFilter.all:
-        return [..._active, ..._waiting, ..._stopped];
+        return allTasks;
     }
+  }
+
+  DownloadTask? findTask(String gid) {
+    for (final t in allTasks) {
+      if (t.gid == gid) return t;
+    }
+    return null;
   }
 
   void setFilter(TaskFilter filter) {
@@ -284,18 +302,83 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<String> addUri(String uri, {Map<String, String>? options}) async {
+    final gids = await addHttpDownload(
+      HttpDownloadRequest(
+        uris: parseUriList(uri),
+        options: HttpDownloadOptions(
+          dir: options?['dir'] ?? _downloadSettings.defaultDir,
+          out: options?['out'],
+          split: int.tryParse(options?['split'] ?? '') ??
+              _downloadSettings.split,
+          maxConnectionPerServer: int.tryParse(
+                options?['max-connection-per-server'] ?? '',
+              ) ??
+              _downloadSettings.maxConnectionPerServer,
+          referer: options?['referer'],
+          userAgent: options?['user-agent'] ?? _downloadSettings.userAgent,
+        ),
+        asMirrors: true,
+      ),
+    );
+    return gids.first;
+  }
+
+  /// Add HTTP(S)/FTP downloads. Returns created GIDs.
+  Future<List<String>> addHttpDownload(HttpDownloadRequest request) async {
     final client = _requireClient();
-    final lines = uri
-        .split(RegExp(r'[\r\n]+'))
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    if (lines.isEmpty) {
+    if (request.isEmpty) {
       throw Aria2Exception(message: 'Empty URI');
     }
-    final gid = await client.addUri(lines, options: options);
+
+    final unsupported = request.uris.where((u) => !isSupportedHttpUri(u));
+    if (unsupported.isNotEmpty) {
+      throw Aria2Exception(
+        message: 'Unsupported URI scheme: ${unsupported.first}',
+      );
+    }
+
+    // Merge app defaults when request options omit dir/UA/split.
+    final base = _downloadSettings.toHttpOptions(
+      dir: request.options.dir,
+      out: request.options.out,
+      referer: request.options.referer,
+      headers: request.options.headers,
+    );
+    final opts = HttpDownloadOptions(
+      dir: request.options.dir ?? base.dir,
+      out: request.options.out,
+      split: request.options.split,
+      maxConnectionPerServer: request.options.maxConnectionPerServer,
+      referer: request.options.referer,
+      userAgent: request.options.userAgent ?? base.userAgent,
+      headers: request.options.headers,
+      continueDownload: request.options.continueDownload,
+      maxTries: request.options.maxTries,
+      timeout: request.options.timeout,
+      extra: request.options.extra,
+    ).toAria2Options();
+
+    final gids = <String>[];
+    if (request.asMirrors || request.uris.length == 1) {
+      gids.add(await client.addUri(request.uris, options: opts));
+    } else {
+      for (final uri in request.uris) {
+        // Per-URI: only first gets `out` if set (multi-file names differ).
+        final perOpts = Map<String, String>.from(opts);
+        if (request.uris.length > 1) {
+          perOpts.remove('out');
+        }
+        gids.add(await client.addUri([uri], options: perOpts));
+      }
+    }
+
+    try {
+      await client.saveSession();
+    } on Aria2Exception {
+      // Optional on some builds.
+    }
     await refresh();
-    return gid;
+    return gids;
   }
 
   Future<void> pause(String gid) async {
@@ -308,15 +391,19 @@ class SessionController extends ChangeNotifier {
     await refresh();
   }
 
-  Future<void> remove(String gid) async {
+  Future<void> pauseAll() async {
+    await _requireClient().pauseAll();
+    await refresh();
+  }
+
+  Future<void> unpauseAll() async {
+    await _requireClient().unpauseAll();
+    await refresh();
+  }
+
+  Future<void> remove(String gid, {bool purgeResult = false}) async {
     final client = _requireClient();
-    DownloadTask? task;
-    for (final t in [..._active, ..._waiting, ..._stopped]) {
-      if (t.gid == gid) {
-        task = t;
-        break;
-      }
-    }
+    final task = findTask(gid);
     final status = task?.status;
     if (status == 'complete' || status == 'error' || status == 'removed') {
       await client.removeDownloadResult(gid);
@@ -326,9 +413,29 @@ class SessionController extends ChangeNotifier {
       } on Aria2Exception {
         await client.forceRemove(gid);
       }
-      // Keep entry in stopped list; user can purge later if needed.
+      if (purgeResult) {
+        try {
+          await client.removeDownloadResult(gid);
+        } on Aria2Exception {
+          // Result may already be gone.
+        }
+      }
+    }
+    try {
+      await client.saveSession();
+    } on Aria2Exception {
+      // ignore
     }
     await refresh();
+  }
+
+  Future<void> purgeStopped() async {
+    await _requireClient().purgeDownloadResult();
+    await refresh();
+  }
+
+  Future<DownloadTask> fetchTask(String gid) async {
+    return _requireClient().tellStatus(gid);
   }
 
   Aria2Client _requireClient() {

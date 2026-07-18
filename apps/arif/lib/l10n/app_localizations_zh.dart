@@ -184,4 +184,130 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get engineBinaryMissing => '未找到（请安装 aria2 或设置 ARIF_ENGINE_PATH）';
+
+  @override
+  String get addHttpTask => '添加 HTTP 下载';
+
+  @override
+  String get urisLabel => '链接';
+
+  @override
+  String get uriHintMulti =>
+      'https://example.com/a.zip\nhttps://example.com/b.zip';
+
+  @override
+  String get uriMultiHint => '每行一个链接。多行默认各自建任务；开启「镜像」则合并为同一任务。';
+
+  @override
+  String get asMirrors => '作为镜像源';
+
+  @override
+  String get asMirrorsHint => '所有链接下载同一文件（单个任务）。';
+
+  @override
+  String get downloadOptions => '下载选项';
+
+  @override
+  String get downloadDir => '下载目录';
+
+  @override
+  String get downloadDirHint => '留空则使用引擎默认目录';
+
+  @override
+  String get fileName => '文件名';
+
+  @override
+  String get fileNameHint => '可选输出文件名（out）';
+
+  @override
+  String get connectionsSplit => '连接数 (split)';
+
+  @override
+  String get connectionsSplitHint =>
+      '对应 aria2 的 split / max-connection-per-server';
+
+  @override
+  String get referer => 'Referer';
+
+  @override
+  String get userAgent => 'User-Agent';
+
+  @override
+  String get startDownload => '开始下载';
+
+  @override
+  String get adding => '添加中…';
+
+  @override
+  String get emptyUris => '请至少输入一个链接。';
+
+  @override
+  String unsupportedUri(String uri) {
+    return '不支持的链接：$uri';
+  }
+
+  @override
+  String tasksAdded(int count) {
+    return '已添加 $count 个任务';
+  }
+
+  @override
+  String get taskDetail => '任务详情';
+
+  @override
+  String get taskNotFound => '找不到任务';
+
+  @override
+  String get status => '状态';
+
+  @override
+  String get gid => 'GID';
+
+  @override
+  String get eta => '剩余时间';
+
+  @override
+  String get uri => '链接';
+
+  @override
+  String get error => '错误';
+
+  @override
+  String get files => '文件';
+
+  @override
+  String get copied => '已复制';
+
+  @override
+  String get pauseAll => '全部暂停';
+
+  @override
+  String get resumeAll => '全部继续';
+
+  @override
+  String get statusActive => '下载中';
+
+  @override
+  String get statusWaiting => '等待中';
+
+  @override
+  String get statusPaused => '已暂停';
+
+  @override
+  String get statusComplete => '已完成';
+
+  @override
+  String get statusError => '错误';
+
+  @override
+  String get statusRemoved => '已移除';
+
+  @override
+  String get defaultDownloadDir => '默认下载目录';
+
+  @override
+  String get downloadDefaults => '下载默认值';
+
+  @override
+  String get save => '保存';
 }

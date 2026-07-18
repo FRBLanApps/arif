@@ -187,4 +187,130 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get engineBinaryMissing =>
       'Not found (install aria2 or set ARIF_ENGINE_PATH)';
+
+  @override
+  String get addHttpTask => 'Add HTTP download';
+
+  @override
+  String get urisLabel => 'URLs';
+
+  @override
+  String get uriHintMulti =>
+      'https://example.com/a.zip\nhttps://example.com/b.zip';
+
+  @override
+  String get uriMultiHint =>
+      'One URL per line. Multiple lines create separate tasks unless “mirrors” is enabled.';
+
+  @override
+  String get asMirrors => 'Use as mirrors';
+
+  @override
+  String get asMirrorsHint => 'All URLs download the same file (single task).';
+
+  @override
+  String get downloadOptions => 'Options';
+
+  @override
+  String get downloadDir => 'Download directory';
+
+  @override
+  String get downloadDirHint => 'Leave empty to use engine default';
+
+  @override
+  String get fileName => 'File name';
+
+  @override
+  String get fileNameHint => 'Optional output name (out)';
+
+  @override
+  String get connectionsSplit => 'Connections (split)';
+
+  @override
+  String get connectionsSplitHint => 'aria2 split / max-connection-per-server';
+
+  @override
+  String get referer => 'Referer';
+
+  @override
+  String get userAgent => 'User-Agent';
+
+  @override
+  String get startDownload => 'Start download';
+
+  @override
+  String get adding => 'Adding…';
+
+  @override
+  String get emptyUris => 'Enter at least one URL.';
+
+  @override
+  String unsupportedUri(String uri) {
+    return 'Unsupported URI: $uri';
+  }
+
+  @override
+  String tasksAdded(int count) {
+    return 'Added $count task(s)';
+  }
+
+  @override
+  String get taskDetail => 'Task detail';
+
+  @override
+  String get taskNotFound => 'Task not found';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get gid => 'GID';
+
+  @override
+  String get eta => 'ETA';
+
+  @override
+  String get uri => 'URI';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get files => 'Files';
+
+  @override
+  String get copied => 'Copied';
+
+  @override
+  String get pauseAll => 'Pause all';
+
+  @override
+  String get resumeAll => 'Resume all';
+
+  @override
+  String get statusActive => 'active';
+
+  @override
+  String get statusWaiting => 'waiting';
+
+  @override
+  String get statusPaused => 'paused';
+
+  @override
+  String get statusComplete => 'complete';
+
+  @override
+  String get statusError => 'error';
+
+  @override
+  String get statusRemoved => 'removed';
+
+  @override
+  String get defaultDownloadDir => 'Default download directory';
+
+  @override
+  String get downloadDefaults => 'Download defaults';
+
+  @override
+  String get save => 'Save';
 }

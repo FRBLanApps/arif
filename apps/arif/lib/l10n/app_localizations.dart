@@ -433,6 +433,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not found (install aria2 or set ARIF_ENGINE_PATH)'**
   String get engineBinaryMissing;
+
+  /// No description provided for @addHttpTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Add HTTP download'**
+  String get addHttpTask;
+
+  /// No description provided for @urisLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'URLs'**
+  String get urisLabel;
+
+  /// No description provided for @uriHintMulti.
+  ///
+  /// In en, this message translates to:
+  /// **'https://example.com/a.zip\nhttps://example.com/b.zip'**
+  String get uriHintMulti;
+
+  /// No description provided for @uriMultiHint.
+  ///
+  /// In en, this message translates to:
+  /// **'One URL per line. Multiple lines create separate tasks unless “mirrors” is enabled.'**
+  String get uriMultiHint;
+
+  /// No description provided for @asMirrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Use as mirrors'**
+  String get asMirrors;
+
+  /// No description provided for @asMirrorsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'All URLs download the same file (single task).'**
+  String get asMirrorsHint;
+
+  /// No description provided for @downloadOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Options'**
+  String get downloadOptions;
+
+  /// No description provided for @downloadDir.
+  ///
+  /// In en, this message translates to:
+  /// **'Download directory'**
+  String get downloadDir;
+
+  /// No description provided for @downloadDirHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty to use engine default'**
+  String get downloadDirHint;
+
+  /// No description provided for @fileName.
+  ///
+  /// In en, this message translates to:
+  /// **'File name'**
+  String get fileName;
+
+  /// No description provided for @fileNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional output name (out)'**
+  String get fileNameHint;
+
+  /// No description provided for @connectionsSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Connections (split)'**
+  String get connectionsSplit;
+
+  /// No description provided for @connectionsSplitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'aria2 split / max-connection-per-server'**
+  String get connectionsSplitHint;
+
+  /// No description provided for @referer.
+  ///
+  /// In en, this message translates to:
+  /// **'Referer'**
+  String get referer;
+
+  /// No description provided for @userAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'User-Agent'**
+  String get userAgent;
+
+  /// No description provided for @startDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Start download'**
+  String get startDownload;
+
+  /// No description provided for @adding.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding…'**
+  String get adding;
+
+  /// No description provided for @emptyUris.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter at least one URL.'**
+  String get emptyUris;
+
+  /// No description provided for @unsupportedUri.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported URI: {uri}'**
+  String unsupportedUri(String uri);
+
+  /// No description provided for @tasksAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {count} task(s)'**
+  String tasksAdded(int count);
+
+  /// No description provided for @taskDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Task detail'**
+  String get taskDetail;
+
+  /// No description provided for @taskNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Task not found'**
+  String get taskNotFound;
+
+  /// No description provided for @status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get status;
+
+  /// No description provided for @gid.
+  ///
+  /// In en, this message translates to:
+  /// **'GID'**
+  String get gid;
+
+  /// No description provided for @eta.
+  ///
+  /// In en, this message translates to:
+  /// **'ETA'**
+  String get eta;
+
+  /// No description provided for @uri.
+  ///
+  /// In en, this message translates to:
+  /// **'URI'**
+  String get uri;
+
+  /// No description provided for @error.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get error;
+
+  /// No description provided for @files.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get files;
+
+  /// No description provided for @copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get copied;
+
+  /// No description provided for @pauseAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause all'**
+  String get pauseAll;
+
+  /// No description provided for @resumeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume all'**
+  String get resumeAll;
+
+  /// No description provided for @statusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'active'**
+  String get statusActive;
+
+  /// No description provided for @statusWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'waiting'**
+  String get statusWaiting;
+
+  /// No description provided for @statusPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'paused'**
+  String get statusPaused;
+
+  /// No description provided for @statusComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'complete'**
+  String get statusComplete;
+
+  /// No description provided for @statusError.
+  ///
+  /// In en, this message translates to:
+  /// **'error'**
+  String get statusError;
+
+  /// No description provided for @statusRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'removed'**
+  String get statusRemoved;
+
+  /// No description provided for @defaultDownloadDir.
+  ///
+  /// In en, this message translates to:
+  /// **'Default download directory'**
+  String get defaultDownloadDir;
+
+  /// No description provided for @downloadDefaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Download defaults'**
+  String get downloadDefaults;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
 }
 
 class _AppLocalizationsDelegate

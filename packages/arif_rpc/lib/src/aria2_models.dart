@@ -47,6 +47,7 @@ class DownloadTask {
     this.followedBy = const [],
     this.following,
     this.belongsTo,
+    this.infoHash,
   });
 
   final String gid;
@@ -65,10 +66,24 @@ class DownloadTask {
   final List<String> followedBy;
   final String? following;
   final String? belongsTo;
+  final String? infoHash;
 
   double get progress {
     if (totalLength <= 0) return 0;
     return completedLength / totalLength;
+  }
+
+  int get remainingLength {
+    final left = totalLength - completedLength;
+    return left < 0 ? 0 : left;
+  }
+
+  /// ETA in seconds when speed > 0 and total known; otherwise null.
+  int? get etaSeconds {
+    if (downloadSpeed <= 0 || totalLength <= 0) return null;
+    final left = remainingLength;
+    if (left <= 0) return 0;
+    return (left / downloadSpeed).ceil();
   }
 
   String get displayName {
@@ -76,10 +91,26 @@ class DownloadTask {
       final path = files.first.path;
       if (path != null && path.isNotEmpty) {
         final parts = path.replaceAll('\\', '/').split('/');
-        return parts.isNotEmpty ? parts.last : path;
+        final name = parts.isNotEmpty ? parts.last : path;
+        if (name.isNotEmpty) return name;
+      }
+      if (files.first.uris.isNotEmpty) {
+        final uri = files.first.uris.first;
+        try {
+          final segments = Uri.parse(uri).pathSegments;
+          if (segments.isNotEmpty && segments.last.isNotEmpty) {
+            return Uri.decodeComponent(segments.last);
+          }
+        } catch (_) {}
       }
     }
     return gid;
+  }
+
+  String? get primaryUri {
+    if (files.isEmpty) return null;
+    if (files.first.uris.isEmpty) return null;
+    return files.first.uris.first;
   }
 
   factory DownloadTask.fromJson(Map<String, dynamic> json) {
@@ -111,6 +142,7 @@ class DownloadTask {
           : const [],
       following: json['following'] as String?,
       belongsTo: json['belongsTo'] as String?,
+      infoHash: json['infoHash'] as String?,
     );
   }
 }

@@ -19,3 +19,17 @@ String formatProgress(double progress) {
   if (pct >= 10) return '${pct.toStringAsFixed(1)}%';
   return '${pct.toStringAsFixed(2)}%';
 }
+
+String formatEta(int? seconds) {
+  if (seconds == null) return '—';
+  if (seconds < 0) return '—';
+  if (seconds < 60) return '${seconds}s';
+  if (seconds < 3600) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '${m}m ${s}s';
+  }
+  final h = seconds ~/ 3600;
+  final m = (seconds % 3600) ~/ 60;
+  return '${h}h ${m}m';
+}

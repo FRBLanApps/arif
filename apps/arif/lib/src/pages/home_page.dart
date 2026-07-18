@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:arif/l10n/app_localizations.dart';
+import 'package:arif/src/pages/add_http_page.dart';
+import 'package:arif/src/pages/task_detail_page.dart';
 import 'package:arif/src/state/locale_controller.dart';
 import 'package:arif/src/state/session_controller.dart';
 import 'package:arif/src/util/format.dart';
@@ -38,6 +40,18 @@ class _HomePageState extends State<HomePage> {
           appBar: AppBar(
             title: Text(l10n.tasks),
             actions: [
+              if (canAct) ...[
+                IconButton(
+                  tooltip: l10n.pauseAll,
+                  onPressed: () => _runAction(session.pauseAll),
+                  icon: const Icon(Icons.pause_circle_outline),
+                ),
+                IconButton(
+                  tooltip: l10n.resumeAll,
+                  onPressed: () => _runAction(session.unpauseAll),
+                  icon: const Icon(Icons.play_circle_outline),
+                ),
+              ],
               IconButton(
                 tooltip: l10n.connections,
                 onPressed: () =>
@@ -109,22 +123,38 @@ class _HomePageState extends State<HomePage> {
                       segments: [
                         ButtonSegment(
                           value: TaskFilter.active,
-                          label: Text(l10n.active),
+                          label: Text(
+                            compact
+                                ? l10n.active
+                                : '${l10n.active} (${session.activeTasks.length})',
+                          ),
                           icon: compact ? null : const Icon(Icons.play_arrow),
                         ),
                         ButtonSegment(
                           value: TaskFilter.waiting,
-                          label: Text(l10n.waiting),
+                          label: Text(
+                            compact
+                                ? l10n.waiting
+                                : '${l10n.waiting} (${session.waitingTasks.length})',
+                          ),
                           icon: compact ? null : const Icon(Icons.schedule),
                         ),
                         ButtonSegment(
                           value: TaskFilter.stopped,
-                          label: Text(l10n.stopped),
+                          label: Text(
+                            compact
+                                ? l10n.stopped
+                                : '${l10n.stopped} (${session.stoppedTasks.length})',
+                          ),
                           icon: compact ? null : const Icon(Icons.stop),
                         ),
                         ButtonSegment(
                           value: TaskFilter.all,
-                          label: Text(l10n.all),
+                          label: Text(
+                            compact
+                                ? l10n.all
+                                : '${l10n.all} (${session.allTasks.length})',
+                          ),
                           icon: compact ? null : const Icon(Icons.list),
                         ),
                       ],
@@ -141,13 +171,32 @@ class _HomePageState extends State<HomePage> {
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: canAct
-                ? () => _showAddTaskDialog(context)
+                ? () => _openAddHttp(context)
                 : () => Navigator.of(context).pushNamed('/connections'),
             icon: Icon(canAct ? Icons.add : Icons.link),
             label: Text(canAct ? l10n.addTask : l10n.connections),
           ),
         );
       },
+    );
+  }
+
+  Future<void> _openAddHttp(BuildContext context) async {
+    await Navigator.of(context).push<List<String>>(
+      MaterialPageRoute(
+        builder: (_) => AddHttpPage(session: widget.session),
+      ),
+    );
+  }
+
+  void _openDetail(DownloadTask task) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TaskDetailPage(
+          session: widget.session,
+          gid: task.gid,
+        ),
+      ),
     );
   }
 
@@ -244,6 +293,12 @@ class _HomePageState extends State<HomePage> {
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => _openAddHttp(context),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.addHttpTask),
+              ),
             ],
           ),
         ),
@@ -260,6 +315,7 @@ class _HomePageState extends State<HomePage> {
           final task = tasks[index];
           return TaskTile(
             task: task,
+            onTap: () => _openDetail(task),
             onPause: () => _runAction(() => session.pause(task.gid)),
             onResume: () => _runAction(() => session.unpause(task.gid)),
             onRemove: () => _confirmRemove(task),
@@ -301,63 +357,6 @@ class _HomePageState extends State<HomePage> {
     );
     if (ok == true) {
       await _runAction(() => widget.session.remove(task.gid));
-    }
-  }
-
-  Future<void> _showAddTaskDialog(BuildContext context) async {
-    final l10n = AppLocalizations.of(context);
-    if (!widget.session.isConnected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.notConnected)),
-      );
-      return;
-    }
-
-    final controller = TextEditingController();
-    final uri = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(l10n.addTask),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: l10n.uriHint,
-              border: const OutlineInputBorder(),
-            ),
-            autofocus: true,
-            keyboardType: TextInputType.url,
-            minLines: 1,
-            maxLines: 4,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: Text(l10n.add),
-            ),
-          ],
-        );
-      },
-    );
-
-    controller.dispose();
-    if (uri == null || uri.isEmpty || !context.mounted) return;
-
-    try {
-      final gid = await widget.session.addUri(uri);
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.taskAdded(gid))),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      final message = e is Aria2Exception ? e.message : e.toString();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }
