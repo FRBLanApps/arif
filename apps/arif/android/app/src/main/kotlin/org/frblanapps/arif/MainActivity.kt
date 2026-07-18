@@ -1,4 +1,4 @@
-package com.arif.arif
+package org.frblanapps.arif
 
 import io.flutter.embedding.android.FlutterActivity
 
